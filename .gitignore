@@ -1,0 +1,10 @@
+/target
+Cargo.lock.bak
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code runtime artifacts (lock files, scheduled-task state, session metadata).
+.claude/

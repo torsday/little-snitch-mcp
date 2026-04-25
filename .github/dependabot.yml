@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # Cargo dependencies — patch + minor grouped, majors as their own PRs.
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "type: chore"
+      - "tech-debt"
+    groups:
+      cargo-minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions — pinned to commit SHAs in the workflows; Dependabot
+  # bumps the SHA when a new tag drops, with the version in the comment.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "type: chore"
+      - "type: infra"

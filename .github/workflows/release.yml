@@ -1,0 +1,241 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  # Required for actions/attest-build-provenance to mint a Sigstore-signed
+  # provenance attestation for each release artifact.
+  id-token: write
+  attestations: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry + build
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Strip binary
+        run: strip target/${{ matrix.target }}/release/little-snitch-mcp
+
+      - name: Import signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+        run: |
+          # Decode the base64-encoded P12 certificate and import into a temporary keychain.
+          echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import /tmp/certificate.p12 -k build.keychain \
+            -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          rm /tmp/certificate.p12
+
+      - name: Sign binary
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          codesign \
+            --options runtime \
+            --timestamp \
+            --sign "Developer ID Application: $APPLE_TEAM_ID" \
+            target/${{ matrix.target }}/release/little-snitch-mcp
+
+      - name: Notarize binary
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          # Notarytool requires a zip or dmg; wrap the binary.
+          ditto -c -k --keepParent \
+            target/${{ matrix.target }}/release/little-snitch-mcp \
+            /tmp/notarize-${{ matrix.target }}.zip
+
+          xcrun notarytool submit /tmp/notarize-${{ matrix.target }}.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+
+          rm /tmp/notarize-${{ matrix.target }}.zip
+
+      - name: Staple notarization ticket
+        run: |
+          xcrun stapler staple \
+            target/${{ matrix.target }}/release/little-snitch-mcp
+
+      - name: Package
+        run: |
+          tar czf little-snitch-mcp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
+            -C target/${{ matrix.target }}/release little-snitch-mcp
+
+      - name: Compute SHA256
+        run: |
+          shasum -a 256 little-snitch-mcp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
+            > little-snitch-mcp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+
+      - name: Generate build provenance attestation
+        uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2 # v2.2.3
+        with:
+          subject-path: little-snitch-mcp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          name: ${{ github.ref_name }}
+          files: |
+            little-snitch-mcp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
+            little-snitch-mcp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+
+  checksums:
+    name: Aggregate SHA256SUMS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Download per-target checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Pull each per-target .sha256 from the release the matrix just populated,
+          # concatenate, and re-upload as a single SHA256SUMS file.
+          mkdir -p /tmp/sums
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            gh release download "${{ github.ref_name }}" \
+              --repo "${{ github.repository }}" \
+              --pattern "little-snitch-mcp-${{ github.ref_name }}-${target}.tar.gz.sha256" \
+              --dir /tmp/sums
+          done
+          cat /tmp/sums/*.sha256 > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload aggregated SHA256SUMS
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          name: ${{ github.ref_name }}
+          files: SHA256SUMS
+
+  bump-tap:
+    name: Bump torsday/homebrew-tap formula
+    needs: [build, checksums]
+    runs-on: ubuntu-latest
+    # Only bump for tagged stable releases; skip pre-release / RC tags
+    # (anything containing a hyphen, e.g. v1.0.0-rc.1).
+    if: ${{ !contains(github.ref_name, '-') }}
+    env:
+      # PAT with `contents: write` + `pull-requests: write` on torsday/homebrew-tap.
+      # Setup: see README "Release and distribution".
+      GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Checkout the tap
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: torsday/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Download SHA256SUMS from the release
+        run: |
+          gh release download "$TAG" \
+            --repo torsday/little-snitch-mcp \
+            --pattern SHA256SUMS \
+            --dir /tmp
+
+      - name: Update formula
+        # Two-arch formula: parse SHA256SUMS, compute version (strip leading v),
+        # and rewrite version + both per-arch sha256 lines in place.
+        # The URL pattern is anchored on the tag in the formula, so updating
+        # `version "..."` is enough to update both URLs.
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          ARM_SHA=$(awk '/aarch64-apple-darwin/ {print $1}' /tmp/SHA256SUMS)
+          INTEL_SHA=$(awk '/x86_64-apple-darwin/  {print $1}' /tmp/SHA256SUMS)
+          if [ -z "$ARM_SHA" ] || [ -z "$INTEL_SHA" ]; then
+            echo "::error::Missing per-arch sha256 in SHA256SUMS"; exit 1
+          fi
+
+          FORMULA=tap/Formula/little-snitch-mcp.rb
+
+          # Update the version literal.
+          sed -i.bak -E "s|^  version \".*\"|  version \"${VERSION}\"|" "$FORMULA"
+
+          # Update each per-arch sha256. This relies on the formula keeping
+          # `on_arm` above `on_intel`, which the scaffolded formula does;
+          # the assertion below catches drift.
+          python3 - "$FORMULA" "$ARM_SHA" "$INTEL_SHA" <<'PY'
+          import re, sys
+          path, arm, intel = sys.argv[1:]
+          src = open(path).read()
+          # Replace the FIRST sha256 (under on_arm) and the SECOND (under on_intel).
+          def repl(seq):
+              i = iter(seq)
+              def f(m): return f'sha256 "{next(i)}"'
+              return f
+          new, n = re.subn(r'sha256 "[0-9a-f]{64}"', repl([arm, intel]), src, count=2)
+          if n != 2:
+              raise SystemExit(f"expected 2 sha256 substitutions, got {n}")
+          open(path, "w").write(new)
+          PY
+          rm -f "$FORMULA.bak"
+
+          echo "--- Updated formula ---"
+          cat "$FORMULA"
+
+      - name: Open PR against the tap
+        working-directory: tap
+        run: |
+          set -euo pipefail
+          BRANCH="bump-little-snitch-mcp-${TAG}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add Formula/little-snitch-mcp.rb
+          git commit -m "little-snitch-mcp ${TAG}" \
+                     -m "Auto-bumped by the upstream release workflow:" \
+                     -m "https://github.com/torsday/little-snitch-mcp/actions/runs/${{ github.run_id }}"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --repo torsday/homebrew-tap \
+            --base main \
+            --head "$BRANCH" \
+            --title "little-snitch-mcp ${TAG}" \
+            --body  "Auto-bumped by [release workflow run](https://github.com/torsday/little-snitch-mcp/actions/runs/${{ github.run_id }}). Verify the per-arch sha256 values match the [SHA256SUMS](https://github.com/torsday/little-snitch-mcp/releases/download/${TAG}/SHA256SUMS) attached to the release before merging."

@@ -1,0 +1,88 @@
+# cargo-deny configuration
+#
+# Pins the security-relevant invariants the README's "Hard guarantees" section
+# claims: no HTTP client crates, no TLS stack, no async networking. A future
+# contributor who pulls one in "just for one thing" fails CI, not silently
+# invalidates the README.
+#
+# Run locally: `cargo deny check`
+# CI runs: `cargo deny check bans advisories sources licenses`
+
+[graph]
+# Match the host triples we actually ship binaries for.
+targets = [
+    { triple = "aarch64-apple-darwin" },
+    { triple = "x86_64-apple-darwin" },
+]
+all-features = false
+no-default-features = false
+
+[advisories]
+version = 2
+db-path = "$CARGO_HOME/advisory-dbs"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "deny"
+ignore = []
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+# Hard ban: any crate that could turn this into a network-capable binary.
+# These are the ones the README's "no network sockets" guarantee depends on
+# *not* being in the dep graph. Add to this list if you find more.
+deny = [
+    # HTTP / TLS clients
+    { crate = "reqwest",            reason = "no-network invariant: no HTTP client" },
+    { crate = "hyper",              reason = "no-network invariant: no HTTP client" },
+    { crate = "hyper-util",         reason = "no-network invariant: no HTTP client" },
+    { crate = "ureq",               reason = "no-network invariant: no HTTP client" },
+    { crate = "isahc",              reason = "no-network invariant: no HTTP client" },
+    { crate = "surf",               reason = "no-network invariant: no HTTP client" },
+    { crate = "curl",               reason = "no-network invariant: no HTTP client" },
+    { crate = "curl-sys",           reason = "no-network invariant: no HTTP client" },
+    { crate = "attohttpc",          reason = "no-network invariant: no HTTP client" },
+
+    # WebSockets / SSE / gRPC
+    { crate = "tokio-tungstenite",  reason = "no-network invariant: no WebSocket transport" },
+    { crate = "tungstenite",        reason = "no-network invariant: no WebSocket transport" },
+    { crate = "tonic",              reason = "no-network invariant: no gRPC client/server" },
+
+    # TLS stacks (no client to use them, but ban directly to fail closed)
+    { crate = "rustls",             reason = "no-network invariant: no TLS stack" },
+    { crate = "native-tls",         reason = "no-network invariant: no TLS stack" },
+    { crate = "openssl",            reason = "no-network invariant: no TLS stack" },
+    { crate = "openssl-sys",        reason = "no-network invariant: no TLS stack" },
+
+    # Async networking primitives
+    { crate = "async-net",          reason = "no-network invariant: no async networking" },
+    # Note: `mio` is intentionally NOT banned. It's a transitive dep of tokio's
+    # `signal` and `process` features (which we use for clean stdio MCP shutdown
+    # and CLI subprocess spawning). mio's networking APIs are only reachable via
+    # tokio's `net` feature, which is *not* in our feature list — that's the
+    # real gate, enforced by tests/transport_is_stdio_only.rs.
+]
+
+# Crates that can appear in the graph but only via the listed parents.
+# Empty for now; populate if a transitive use ever has a legitimate reason.
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
