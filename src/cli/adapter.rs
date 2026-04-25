@@ -28,17 +28,15 @@ use super::binary::{LsBinaryNotFound, resolve_binary};
 // Regexes — compiled once at first use, reused on every call.
 // ---------------------------------------------------------------------------
 
-static RE_NOT_AUTHORIZED: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"command line tool is not authorized").unwrap()
-});
+static RE_NOT_AUTHORIZED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"command line tool is not authorized").unwrap());
 
 static RE_MUST_BE_ROOT: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"must be run as root").unwrap());
 
 // Captures the resource name between the double-quotes.
-static RE_NOT_FOUND: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"Rule group or blocklist "([^"]+)" not found"#).unwrap()
-});
+static RE_NOT_FOUND: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"Rule group or blocklist "([^"]+)" not found"#).unwrap());
 
 // ---------------------------------------------------------------------------
 // Error type
