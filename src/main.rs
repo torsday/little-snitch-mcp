@@ -202,6 +202,31 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SudoRead. Reads all preferences via CLI; requires sudo; no mutation.
+    #[tool(
+        description = "List all Little Snitch preferences as a key→value map. \
+                       Optional `scope` selects which store to query: \
+                       `\"global\"` (system-wide defaults, `-g`), \
+                       `\"user\"` (per-user overrides, `-u`), or \
+                       `\"all\"` (both stores merged, the default). \
+                       Secret keys (dnsEncryption*, any key matching \
+                       password|secret|token|credential|key) are redacted to \
+                       `\"<redacted: KEY>\"`. \
+                       Requires the CLI to be authorized and running as root (sudo)."
+    )]
+    async fn list_preferences(
+        &self,
+        Parameters(args): Parameters<tools::ListPreferencesArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::list_preferences::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
