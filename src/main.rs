@@ -299,7 +299,7 @@ impl ServerHandler for EchoServer {
                         request.uri,
                     )]));
                 }
-                Err(msg) if msg.contains("not found") => {
+                Err(msg) if msg.starts_with(resources::lsrules_files::NOT_FOUND_PREFIX) => {
                     return Err(McpError::invalid_params(msg, None));
                 }
                 Err(msg) => {

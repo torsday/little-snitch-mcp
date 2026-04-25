@@ -49,11 +49,17 @@ static RE_NOT_FOUND: LazyLock<Regex> =
 #[derive(Debug, Error)]
 pub enum LsCliError {
     /// The command line tool is not authorized (user has not granted CLI access).
-    #[error("littlesnitch: command line tool is not authorized")]
+    #[error(
+        "littlesnitch: command line tool is not authorized — \
+         open Little Snitch Preferences → Security and enable CLI access"
+    )]
     NotAuthorized,
 
     /// The command must be run as root (`sudo` required).
-    #[error("littlesnitch: must be run as root")]
+    #[error(
+        "littlesnitch: must be run as root — \
+         restart the MCP server with sudo, or use the warm_sudo tool to prepare a session"
+    )]
     MustBeRoot,
 
     /// The named rule group or blocklist does not exist.

@@ -112,13 +112,17 @@ fn days_to_ymd(days: u64) -> (u64, u8, u8) {
     (y, m as u8, d as u8)
 }
 
+/// Sentinel prefix for not-found errors returned by [`read_file`].
+/// Callers use this constant rather than string matching.
+pub const NOT_FOUND_PREFIX: &str = "not found:";
+
 /// Read and validate one `.lsrules` file by name stem.
 ///
-/// Returns `Err` if the file does not exist (caller maps to 404).
+/// Returns `Err` starting with [`NOT_FOUND_PREFIX`] if the file does not exist.
 pub fn read_file(rules_dir: &std::path::Path, name: &str) -> Result<FileContents, String> {
     let path = rules_dir.join(format!("{name}.lsrules"));
     if !path.exists() {
-        return Err(format!("not found: {path:?}"));
+        return Err(format!("{NOT_FOUND_PREFIX} {path:?}"));
     }
 
     let raw = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {path:?}: {e}"))?;
