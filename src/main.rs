@@ -13,6 +13,7 @@ use tracing_subscriber::EnvFilter;
 
 pub mod cli;
 pub mod safety;
+pub mod tools;
 
 #[derive(Parser)]
 #[command(name = env!("CARGO_PKG_NAME"), version, about = env!("CARGO_PKG_DESCRIPTION"))]
@@ -51,6 +52,27 @@ impl EchoServer {
         Parameters(args): Parameters<EchoArgs>,
     ) -> Result<CallToolResult, McpError> {
         Ok(CallToolResult::success(vec![Content::text(args.message)]))
+    }
+
+    // Classification: SafeRead. No filesystem writes; reads are path-scoped.
+    #[tool(
+        description = "Validate a .lsrules JSON file (or inline JSON) against the Little Snitch \
+                       rule-group schema. Returns `valid: true` with an empty `errors` array on \
+                       success, or `valid: false` with field-level errors on failure. Provide \
+                       exactly one of `path` (absolute path to a .lsrules file) or `inline_json` \
+                       (in-memory JSON object)."
+    )]
+    async fn validate_lsrules(
+        &self,
+        Parameters(args): Parameters<tools::ValidateLsrulesArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::validate_lsrules::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
     }
 }
 

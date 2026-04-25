@@ -27,10 +27,16 @@ pub struct ToolMeta {
 ///
 /// Order is irrelevant; uniqueness on `name` is enforced by
 /// [`tests::names_are_unique`].
-pub static TOOLS: &[ToolMeta] = &[ToolMeta {
-    name: "echo",
-    classification: Classification::SafeRead,
-}];
+pub static TOOLS: &[ToolMeta] = &[
+    ToolMeta {
+        name: "echo",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "validate_lsrules",
+        classification: Classification::SafeRead,
+    },
+];
 
 /// Look up a tool's metadata by name.
 pub fn get(name: &str) -> Option<&'static ToolMeta> {
