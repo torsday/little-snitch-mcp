@@ -64,6 +64,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "list_preferences",
         classification: Classification::SudoRead,
     },
+    ToolMeta {
+        name: "doctor",
+        classification: Classification::SafeRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.
