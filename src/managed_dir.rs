@@ -99,9 +99,8 @@ fn ensure_dir_700(path: &Path) -> Result<(), ManagedDirError> {
 }
 
 /// Serializes all tests that mutate `LSMCP_MANAGED_DIR` across the crate.
-/// Import this lock in any test module that calls `std::env::set_var(ENV_MANAGED_DIR, …)`.
-#[cfg(test)]
-pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+/// Available in both unit tests (`#[cfg(test)]`) and integration tests (`tests/`).
+pub static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
 mod tests {

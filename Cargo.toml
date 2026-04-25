@@ -10,6 +10,10 @@ readme = "README.md"
 keywords = ["mcp", "little-snitch", "firewall", "macos"]
 categories = ["command-line-utilities"]
 
+[lib]
+name = "little_snitch_mcp"
+path = "src/lib.rs"
+
 [[bin]]
 name = "little-snitch-mcp"
 path = "src/main.rs"

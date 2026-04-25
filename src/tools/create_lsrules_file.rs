@@ -60,7 +60,8 @@ pub fn run(args: CreateLsrulesArgs) -> Result<CreateResult, String> {
     }
 
     // Build the JSON document from the caller-supplied fields.
-    let mut doc = json!({ "name": args.name });
+    // Always emit "rules" so add/update/remove tools can rely on it existing.
+    let mut doc = json!({ "name": args.name, "rules": [] });
     if let Some(desc) = args.description {
         doc["description"] = json!(desc);
     }
