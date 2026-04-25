@@ -1,5 +1,6 @@
 pub mod add_rule_to_lsrules_file;
 pub mod create_lsrules_file;
+pub mod doctor;
 pub mod export_model_backup;
 pub mod list_preferences;
 pub mod read_preference;
@@ -9,6 +10,7 @@ pub mod validate_lsrules;
 
 pub use add_rule_to_lsrules_file::AddRuleArgs;
 pub use create_lsrules_file::CreateLsrulesArgs;
+pub use doctor::DoctorArgs;
 pub use export_model_backup::ExportModelBackupArgs;
 pub use list_preferences::ListPreferencesArgs;
 pub use read_preference::ReadPreferenceArgs;

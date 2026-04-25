@@ -227,6 +227,31 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SafeRead. No sudo, no mutation; safe to call repeatedly.
+    #[tool(
+        description = "Run environment diagnostics for the Little Snitch MCP server. \
+                       Returns a structured report with five checks: \
+                       (1) littlesnitch binary found and version ≥ 6.3.3, \
+                       (2) CLI authorized ('Allow access via Terminal' enabled), \
+                       (3) TouchID for sudo configured (needed for GUI-client sudo), \
+                       (4) managed directory accessible and writable, \
+                       (5) restore-model supports --preserve-terminal-access (-t). \
+                       Each check has status green|yellow|red plus an optional remediation hint. \
+                       Safe to call at any time — no mutations."
+    )]
+    async fn doctor(
+        &self,
+        Parameters(args): Parameters<tools::DoctorArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::doctor::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
