@@ -141,6 +141,28 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: ManagedWrite. Writes to managed dir only; no sudo; no live-model effect.
+    #[tool(
+        description = "Add a rule to a managed .lsrules file. Provide `file_name` and `rule` \
+                       (a valid lsrules rule object). Deduplicates on the \
+                       (process, remote, direction, ports, action) tuple — if an equivalent rule \
+                       already exists, returns `already_present: true` with no change. Otherwise \
+                       appends the rule, re-validates, and returns the new rule count and a \
+                       unified diff."
+    )]
+    async fn add_rule_to_lsrules_file(
+        &self,
+        Parameters(args): Parameters<tools::AddRuleArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::add_rule_to_lsrules_file::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
