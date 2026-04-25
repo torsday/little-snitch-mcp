@@ -42,11 +42,14 @@ pub fn run(args: CreateLsrulesArgs) -> Result<CreateResult, String> {
         || args.name == ".."
         || args.name == "."
     {
-        return Err(format!("invalid name {:?}: must be a plain filename with no path separators", args.name));
+        return Err(format!(
+            "invalid name {:?}: must be a plain filename with no path separators",
+            args.name
+        ));
     }
 
-    let managed = ManagedDir::bootstrap()
-        .map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
+    let managed =
+        ManagedDir::bootstrap().map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
 
     let target = managed.lsrules_file(&args.name);
 
@@ -61,15 +64,11 @@ pub fn run(args: CreateLsrulesArgs) -> Result<CreateResult, String> {
     if let Some(desc) = args.description {
         doc["description"] = json!(desc);
     }
-    if let Some(domains) = args.denied_remote_domains {
-        if !domains.is_empty() {
-            doc["denied-remote-domains"] = json!(domains);
-        }
+    if let Some(domains) = args.denied_remote_domains.filter(|d| !d.is_empty()) {
+        doc["denied-remote-domains"] = json!(domains);
     }
-    if let Some(rules) = args.rules {
-        if !rules.is_empty() {
-            doc["rules"] = json!(rules);
-        }
+    if let Some(rules) = args.rules.filter(|r| !r.is_empty()) {
+        doc["rules"] = json!(rules);
     }
 
     // Validate before touching the filesystem.
@@ -85,12 +84,15 @@ pub fn run(args: CreateLsrulesArgs) -> Result<CreateResult, String> {
             .iter()
             .map(|e| format!("  {}: {}", e.path, e.message))
             .collect();
-        return Err(format!("content failed schema validation:\n{}", msgs.join("\n")));
+        return Err(format!(
+            "content failed schema validation:\n{}",
+            msgs.join("\n")
+        ));
     }
 
     // Write with mode 600 (owner read+write only).
-    let json_bytes = serde_json::to_vec_pretty(&doc)
-        .map_err(|e| format!("serialization error: {e}"))?;
+    let json_bytes =
+        serde_json::to_vec_pretty(&doc).map_err(|e| format!("serialization error: {e}"))?;
 
     let mut file = std::fs::OpenOptions::new()
         .write(true)
@@ -115,10 +117,11 @@ mod tests {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
-
     fn with_temp_dir<F: FnOnce()>(f: F) {
         // Shared lock prevents concurrent env-var mutation across all managed-dir tests.
-        let _guard = crate::managed_dir::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = crate::managed_dir::ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let td = tempfile::tempdir().unwrap();
         // SAFETY: protected by ENV_LOCK; no concurrent env mutation in this module.
         unsafe {
@@ -205,7 +208,9 @@ mod tests {
     fn valid_rule_is_accepted() {
         with_temp_dir(|| {
             let args = CreateLsrulesArgs {
-                rules: Some(vec![json!({"action": "allow", "process": "any", "remote": "any"})]),
+                rules: Some(vec![
+                    json!({"action": "allow", "process": "any", "remote": "any"}),
+                ]),
                 ..minimal("with-rule")
             };
             assert!(run(args).is_ok());
@@ -220,10 +225,7 @@ mod tests {
                 ..minimal("bad-rule")
             };
             let err = run(args).unwrap_err();
-            assert!(
-                err.contains("schema validation"),
-                "unexpected error: {err}"
-            );
+            assert!(err.contains("schema validation"), "unexpected error: {err}");
         });
     }
 

@@ -4,8 +4,10 @@ use rmcp::schemars;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-static SCHEMA_STR: &str =
-    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/schemas/lsrules.schema.json"));
+static SCHEMA_STR: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/schemas/lsrules.schema.json"
+));
 
 static VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     let schema: serde_json::Value =
@@ -53,10 +55,9 @@ pub fn run(args: ValidateLsrulesArgs) -> Result<ValidateResult, String> {
             return Err("one of `path` or `inline_json` is required".into());
         }
         (Some(p), None) => {
-            let raw = std::fs::read_to_string(&p)
-                .map_err(|e| format!("cannot read file {p:?}: {e}"))?;
-            serde_json::from_str(&raw)
-                .map_err(|e| format!("file {p:?} is not valid JSON: {e}"))?
+            let raw =
+                std::fs::read_to_string(&p).map_err(|e| format!("cannot read file {p:?}: {e}"))?;
+            serde_json::from_str(&raw).map_err(|e| format!("file {p:?} is not valid JSON: {e}"))?
         }
         (None, Some(v)) => v,
     };
