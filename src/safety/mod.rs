@@ -13,6 +13,7 @@ pub mod registry;
 pub mod schema;
 pub mod secret_prefs;
 pub mod token;
+pub mod touchid;
 
 pub use classification::Classification;
 pub use cli::RESTORE_MODEL_TERMINAL_GUARD_FLAG;
@@ -23,3 +24,4 @@ pub use prefs::{
 pub use registry::{TOOLS, ToolMeta};
 pub use schema::{SchemaMismatch, check_bundle_version, extract_bundle_version};
 pub use token::{Session, Token, TokenError, TokenPayload, VerifiedToken, VerifyContext};
+pub use touchid::{TouchIdSudoStatus, detect as detect_touchid_sudo};
