@@ -159,6 +159,27 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SudoRead. Calls `littlesnitch export-model`; requires sudo; no live-model mutation.
+    #[tool(
+        description = "Export the current Little Snitch model to a timestamped backup file in \
+                       the managed backups directory. Wraps `littlesnitch export-model`. \
+                       Returns the absolute path of the written backup file. \
+                       Requires that the CLI is authorized and running as root (sudo). \
+                       Can be called standalone or used as a pre-mutation safety step."
+    )]
+    async fn export_model_backup(
+        &self,
+        Parameters(args): Parameters<tools::ExportModelBackupArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::export_model_backup::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
