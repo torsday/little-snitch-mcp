@@ -11,6 +11,7 @@ use rmcp::{
 };
 use tracing_subscriber::EnvFilter;
 
+pub mod cli;
 pub mod safety;
 
 #[derive(Parser)]
