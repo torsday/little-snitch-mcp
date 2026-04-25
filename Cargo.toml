@@ -22,3 +22,8 @@ thiserror = "2"
 clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+hmac = "0.12"
+sha2 = "0.10"
+subtle = "2"
+rand = "0.9"
+hex = "0.4"
