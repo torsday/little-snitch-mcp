@@ -60,6 +60,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "read_preference",
         classification: Classification::SudoRead,
     },
+    ToolMeta {
+        name: "list_preferences",
+        classification: Classification::SudoRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.

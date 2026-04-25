@@ -11,6 +11,7 @@ pub mod cli;
 pub mod prefs;
 pub mod registry;
 pub mod schema;
+pub mod secret_prefs;
 pub mod token;
 
 pub use classification::Classification;
