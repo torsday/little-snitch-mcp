@@ -1,4 +1,5 @@
 use anyhow::Result;
+use clap::Parser;
 use rmcp::{
     ErrorData as McpError, ServerHandler, ServiceExt,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -12,6 +13,9 @@ use tracing_subscriber::EnvFilter;
 
 pub mod safety;
 
+#[derive(Parser)]
+#[command(name = env!("CARGO_PKG_NAME"), version, about = env!("CARGO_PKG_DESCRIPTION"))]
+struct Cli {}
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct EchoArgs {
     pub message: String,
@@ -70,6 +74,8 @@ impl ServerHandler for EchoServer {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    Cli::parse();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
