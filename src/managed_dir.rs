@@ -56,7 +56,11 @@ impl ManagedDir {
             ensure_dir_700(dir)?;
         }
 
-        Ok(Self { root, rules, backups })
+        Ok(Self {
+            root,
+            rules,
+            backups,
+        })
     }
 
     /// Path to the named `.lsrules` file inside `rules/`.
@@ -108,10 +112,14 @@ mod tests {
         let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let td = tempfile::tempdir().unwrap();
         // SAFETY: protected by ENV_LOCK; no concurrent env mutation across the crate.
-        unsafe { std::env::set_var(ENV_MANAGED_DIR, td.path().join("mcp")); }
+        unsafe {
+            std::env::set_var(ENV_MANAGED_DIR, td.path().join("mcp"));
+        }
         let dir = ManagedDir::bootstrap().unwrap();
         f(dir);
-        unsafe { std::env::remove_var(ENV_MANAGED_DIR); }
+        unsafe {
+            std::env::remove_var(ENV_MANAGED_DIR);
+        }
     }
 
     #[test]

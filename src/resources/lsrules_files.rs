@@ -115,36 +115,31 @@ fn days_to_ymd(days: u64) -> (u64, u8, u8) {
 /// Read and validate one `.lsrules` file by name stem.
 ///
 /// Returns `Err` if the file does not exist (caller maps to 404).
-pub fn read_file(
-    rules_dir: &std::path::Path,
-    name: &str,
-) -> Result<FileContents, String> {
+pub fn read_file(rules_dir: &std::path::Path, name: &str) -> Result<FileContents, String> {
     let path = rules_dir.join(format!("{name}.lsrules"));
     if !path.exists() {
         return Err(format!("not found: {path:?}"));
     }
 
-    let raw = std::fs::read_to_string(&path)
-        .map_err(|e| format!("cannot read {path:?}: {e}"))?;
+    let raw = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {path:?}: {e}"))?;
 
-    let data: serde_json::Value = serde_json::from_str(&raw)
-        .map_err(|e| format!("{path:?} is not valid JSON: {e}"))?;
+    let data: serde_json::Value =
+        serde_json::from_str(&raw).map_err(|e| format!("{path:?} is not valid JSON: {e}"))?;
 
-    let validation = crate::tools::validate_lsrules::run(
-        crate::tools::validate_lsrules::ValidateLsrulesArgs {
+    let validation =
+        crate::tools::validate_lsrules::run(crate::tools::validate_lsrules::ValidateLsrulesArgs {
             path: None,
             inline_json: Some(data.clone()),
-        },
-    )
-    .unwrap_or_else(|e| crate::tools::validate_lsrules::ValidateResult {
-        valid: false,
-        errors: vec![crate::tools::validate_lsrules::FieldError {
-            path: String::new(),
-            message: e,
-            expected: None,
-            actual: None,
-        }],
-    });
+        })
+        .unwrap_or_else(|e| crate::tools::validate_lsrules::ValidateResult {
+            valid: false,
+            errors: vec![crate::tools::validate_lsrules::FieldError {
+                path: String::new(),
+                message: e,
+                expected: None,
+                actual: None,
+            }],
+        });
 
     Ok(FileContents {
         name: name.to_string(),
@@ -197,7 +192,10 @@ mod tests {
 
     #[test]
     fn match_file_uri_valid() {
-        assert_eq!(match_file_uri("littlesnitch://lsrules-files/my-rules"), Some("my-rules"));
+        assert_eq!(
+            match_file_uri("littlesnitch://lsrules-files/my-rules"),
+            Some("my-rules")
+        );
     }
 
     #[test]

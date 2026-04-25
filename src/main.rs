@@ -81,13 +81,11 @@ impl EchoServer {
     }
 
     // Classification: ManagedWrite. Writes to managed dir only; no sudo; no live-model effect.
-    #[tool(
-        description = "Create a new .lsrules file in the managed directory. \
+    #[tool(description = "Create a new .lsrules file in the managed directory. \
                        Provide `name` (used as the filename), optional `description`, \
                        optional `denied_remote_domains` list, and optional `rules` array. \
                        The content is validated against the lsrules schema before writing. \
-                       Refuses to overwrite an existing file unless `replace: true` is passed."
-    )]
+                       Refuses to overwrite an existing file unless `replace: true` is passed.")]
     async fn create_lsrules_file(
         &self,
         Parameters(args): Parameters<tools::CreateLsrulesArgs>,
@@ -136,10 +134,8 @@ impl ServerHandler for EchoServer {
         impl_info.name = env!("CARGO_PKG_NAME").into();
         impl_info.version = env!("CARGO_PKG_VERSION").into();
         info.server_info = impl_info;
-        info.instructions = Some(
-            "MCP server for safely managing Little Snitch rules from an LLM."
-                .into(),
-        );
+        info.instructions =
+            Some("MCP server for safely managing Little Snitch rules from an LLM.".into());
         info
     }
 
@@ -194,9 +190,8 @@ impl ServerHandler for EchoServer {
         request: ReadResourceRequestParams,
         _context: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<ReadResourceResult, McpError> {
-        let managed = managed_dir::ManagedDir::bootstrap().map_err(|e| {
-            McpError::internal_error(format!("managed directory error: {e}"), None)
-        })?;
+        let managed = managed_dir::ManagedDir::bootstrap()
+            .map_err(|e| McpError::internal_error(format!("managed directory error: {e}"), None))?;
 
         // Listing resource
         if request.uri == resources::lsrules_files::URI {

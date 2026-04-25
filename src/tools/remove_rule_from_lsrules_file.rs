@@ -34,10 +34,7 @@ pub struct RemoveRuleResult {
 
 pub fn run(args: RemoveRuleArgs) -> Result<RemoveRuleResult, String> {
     // Validate file_name
-    if args.file_name.is_empty()
-        || args.file_name.contains('/')
-        || args.file_name.contains('\\')
-    {
+    if args.file_name.is_empty() || args.file_name.contains('/') || args.file_name.contains('\\') {
         return Err(format!("invalid file_name {:?}", args.file_name));
     }
 
@@ -45,21 +42,21 @@ pub fn run(args: RemoveRuleArgs) -> Result<RemoveRuleResult, String> {
     match (&args.index, &args.match_tuple) {
         (None, None) => return Err("provide exactly one of `index` or `match_tuple`".into()),
         (Some(_), Some(_)) => {
-            return Err("provide exactly one of `index` or `match_tuple`, not both".into())
+            return Err("provide exactly one of `index` or `match_tuple`, not both".into());
         }
         _ => {}
     }
 
-    let managed = ManagedDir::bootstrap()
-        .map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
+    let managed =
+        ManagedDir::bootstrap().map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
 
     let target = managed.lsrules_file(&args.file_name);
     if !target.exists() {
         return Err(format!("file not found: {target:?}"));
     }
 
-    let raw = std::fs::read_to_string(&target)
-        .map_err(|e| format!("cannot read {target:?}: {e}"))?;
+    let raw =
+        std::fs::read_to_string(&target).map_err(|e| format!("cannot read {target:?}: {e}"))?;
 
     let mut doc: serde_json::Value =
         serde_json::from_str(&raw).map_err(|e| format!("{target:?} is not valid JSON: {e}"))?;
@@ -96,7 +93,7 @@ pub fn run(args: RemoveRuleArgs) -> Result<RemoveRuleResult, String> {
                         "match_tuple is ambiguous: {} rules matched (indices: {:?})",
                         multiple.len(),
                         multiple
-                    ))
+                    ));
                 }
             }
         }
@@ -126,8 +123,8 @@ pub fn run(args: RemoveRuleArgs) -> Result<RemoveRuleResult, String> {
     }
 
     // Serialize new content
-    let new_json = serde_json::to_string_pretty(&doc)
-        .map_err(|e| format!("serialization error: {e}"))?;
+    let new_json =
+        serde_json::to_string_pretty(&doc).map_err(|e| format!("serialization error: {e}"))?;
 
     // Generate unified diff
     let diff = make_diff(&raw, &new_json, &format!("{}.lsrules", args.file_name));
@@ -190,7 +187,9 @@ mod tests {
     use serde_json::json;
 
     fn with_temp_dir<F: FnOnce()>(f: F) {
-        let _guard = crate::managed_dir::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = crate::managed_dir::ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let td = tempfile::tempdir().unwrap();
         unsafe {
             std::env::set_var(crate::managed_dir::ENV_MANAGED_DIR, td.path().join("mcp"));
