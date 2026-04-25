@@ -100,6 +100,27 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: ManagedWrite. Writes to managed dir only; no sudo; no live-model effect.
+    #[tool(
+        description = "Remove a rule from a managed .lsrules file by zero-based index or by a \
+                       partial match tuple. Provide `file_name` plus exactly one of `index` \
+                       (zero-based position in the `rules` array) or `match_tuple` (a JSON \
+                       object whose key/value pairs must all match exactly one rule). Returns \
+                       the removed rule, remaining rule count, and a unified diff of the change."
+    )]
+    async fn remove_rule_from_lsrules_file(
+        &self,
+        Parameters(args): Parameters<tools::RemoveRuleArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::remove_rule_from_lsrules_file::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]

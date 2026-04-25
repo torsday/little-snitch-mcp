@@ -40,6 +40,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "create_lsrules_file",
         classification: Classification::ManagedWrite,
     },
+    ToolMeta {
+        name: "remove_rule_from_lsrules_file",
+        classification: Classification::ManagedWrite,
+    },
 ];
 
 /// Look up a tool's metadata by name.
