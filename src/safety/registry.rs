@@ -56,6 +56,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "export_model_backup",
         classification: Classification::SudoRead,
     },
+    ToolMeta {
+        name: "read_preference",
+        classification: Classification::SudoRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.
