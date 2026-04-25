@@ -14,11 +14,7 @@ use rmcp::{
 };
 use tracing_subscriber::EnvFilter;
 
-pub mod cli;
-pub mod managed_dir;
-pub mod resources;
-pub mod safety;
-pub mod tools;
+use little_snitch_mcp::{managed_dir, resources, tools};
 
 #[derive(Parser)]
 #[command(name = env!("CARGO_PKG_NAME"), version, about = env!("CARGO_PKG_DESCRIPTION"))]
