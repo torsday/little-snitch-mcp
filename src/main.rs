@@ -4,9 +4,10 @@ use rmcp::{
     ErrorData as McpError, ServerHandler, ServiceExt,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{
-        Annotated, CallToolResult, Content, Implementation, ListResourcesResult,
-        PaginatedRequestParams, ProtocolVersion, RawResource, ReadResourceRequestParams,
-        ReadResourceResult, ResourceContents, ServerCapabilities, ServerInfo,
+        Annotated, CallToolResult, Content, Implementation, ListResourceTemplatesResult,
+        ListResourcesResult, PaginatedRequestParams, ProtocolVersion, RawResource,
+        RawResourceTemplate, ReadResourceRequestParams, ReadResourceResult, ResourceContents,
+        ServerCapabilities, ServerInfo,
     },
     schemars, tool, tool_handler, tool_router,
     transport::stdio,
@@ -145,32 +146,73 @@ impl ServerHandler for EchoServer {
         Ok(ListResourcesResult::with_all_items(vec![resource]))
     }
 
+    async fn list_resource_templates(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<ListResourceTemplatesResult, McpError> {
+        let tmpl = Annotated {
+            raw: RawResourceTemplate {
+                uri_template: resources::lsrules_files::URI_TEMPLATE.to_string(),
+                name: "lsrules-file".to_string(),
+                title: Some("Single .lsrules file".to_string()),
+                description: Some(
+                    "Content and validation status of one named .lsrules rule-group file."
+                        .to_string(),
+                ),
+                mime_type: Some("application/json".to_string()),
+                icons: None,
+            },
+            annotations: None,
+        };
+        Ok(ListResourceTemplatesResult::with_all_items(vec![tmpl]))
+    }
+
     async fn read_resource(
         &self,
         request: ReadResourceRequestParams,
         _context: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<ReadResourceResult, McpError> {
-        if request.uri != resources::lsrules_files::URI {
-            return Err(McpError::invalid_params(
-                format!("unknown resource URI: {}", request.uri),
-                None,
-            ));
-        }
-
         let managed = managed_dir::ManagedDir::bootstrap().map_err(|e| {
             McpError::internal_error(format!("managed directory error: {e}"), None)
         })?;
 
-        let entries = resources::lsrules_files::list(&managed.rules)
-            .map_err(|e| McpError::internal_error(e, None))?;
+        // Listing resource
+        if request.uri == resources::lsrules_files::URI {
+            let entries = resources::lsrules_files::list(&managed.rules)
+                .map_err(|e| McpError::internal_error(e, None))?;
+            let json = serde_json::to_string_pretty(&entries)
+                .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            return Ok(ReadResourceResult::new(vec![ResourceContents::text(
+                json,
+                resources::lsrules_files::URI,
+            )]));
+        }
 
-        let json = serde_json::to_string_pretty(&entries)
-            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+        // Per-file resource
+        if let Some(name) = resources::lsrules_files::match_file_uri(&request.uri) {
+            match resources::lsrules_files::read_file(&managed.rules, name) {
+                Ok(contents) => {
+                    let json = serde_json::to_string_pretty(&contents)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+                    return Ok(ReadResourceResult::new(vec![ResourceContents::text(
+                        json,
+                        request.uri,
+                    )]));
+                }
+                Err(msg) if msg.contains("not found") => {
+                    return Err(McpError::invalid_params(msg, None));
+                }
+                Err(msg) => {
+                    return Err(McpError::internal_error(msg, None));
+                }
+            }
+        }
 
-        Ok(ReadResourceResult::new(vec![ResourceContents::text(
-            json,
-            resources::lsrules_files::URI,
-        )]))
+        Err(McpError::invalid_params(
+            format!("unknown resource URI: {}", request.uri),
+            None,
+        ))
     }
 }
 

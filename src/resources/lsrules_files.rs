@@ -2,6 +2,32 @@ use serde::Serialize;
 
 pub const URI: &str = "littlesnitch://lsrules-files";
 
+/// URI template for a single `.lsrules` file resource.
+pub const URI_TEMPLATE: &str = "littlesnitch://lsrules-files/{name}";
+
+/// Prefix used to match/strip individual file URIs.
+const URI_FILE_PREFIX: &str = "littlesnitch://lsrules-files/";
+
+/// Return `Some(name)` if `uri` matches `littlesnitch://lsrules-files/{name}`.
+pub fn match_file_uri(uri: &str) -> Option<&str> {
+    uri.strip_prefix(URI_FILE_PREFIX)
+        .filter(|n| !n.is_empty() && !n.contains('/'))
+}
+
+/// Content envelope returned when reading an individual file.
+///
+/// Fields authored by third parties (notes, descriptions) are nested under
+/// `data` and carried as-is; the outer `_untrusted` flag signals to the host
+/// that this content should not be interpreted as trusted instructions.
+#[derive(Debug, Serialize)]
+pub struct FileContents {
+    pub name: String,
+    pub path: String,
+    pub data: serde_json::Value,
+    pub valid: bool,
+    pub validation_errors: Vec<crate::tools::validate_lsrules::FieldError>,
+}
+
 /// One entry in the listing returned by the `littlesnitch://lsrules-files` resource.
 #[derive(Debug, Serialize)]
 pub struct LsrulesFileEntry {
@@ -86,6 +112,49 @@ fn days_to_ymd(days: u64) -> (u64, u8, u8) {
     (y, m as u8, d as u8)
 }
 
+/// Read and validate one `.lsrules` file by name stem.
+///
+/// Returns `Err` if the file does not exist (caller maps to 404).
+pub fn read_file(
+    rules_dir: &std::path::Path,
+    name: &str,
+) -> Result<FileContents, String> {
+    let path = rules_dir.join(format!("{name}.lsrules"));
+    if !path.exists() {
+        return Err(format!("not found: {path:?}"));
+    }
+
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|e| format!("cannot read {path:?}: {e}"))?;
+
+    let data: serde_json::Value = serde_json::from_str(&raw)
+        .map_err(|e| format!("{path:?} is not valid JSON: {e}"))?;
+
+    let validation = crate::tools::validate_lsrules::run(
+        crate::tools::validate_lsrules::ValidateLsrulesArgs {
+            path: None,
+            inline_json: Some(data.clone()),
+        },
+    )
+    .unwrap_or_else(|e| crate::tools::validate_lsrules::ValidateResult {
+        valid: false,
+        errors: vec![crate::tools::validate_lsrules::FieldError {
+            path: String::new(),
+            message: e,
+            expected: None,
+            actual: None,
+        }],
+    });
+
+    Ok(FileContents {
+        name: name.to_string(),
+        path: path.to_string_lossy().into_owned(),
+        data,
+        valid: validation.valid,
+        validation_errors: validation.errors,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,5 +193,51 @@ mod tests {
     fn format_unix_secs_epoch() {
         // 2020-01-01T00:00:00Z = 1577836800 seconds
         assert_eq!(format_unix_secs(1577836800), "2020-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn match_file_uri_valid() {
+        assert_eq!(match_file_uri("littlesnitch://lsrules-files/my-rules"), Some("my-rules"));
+    }
+
+    #[test]
+    fn match_file_uri_listing_uri_rejected() {
+        assert_eq!(match_file_uri("littlesnitch://lsrules-files"), None);
+    }
+
+    #[test]
+    fn match_file_uri_nested_path_rejected() {
+        assert_eq!(match_file_uri("littlesnitch://lsrules-files/a/b"), None);
+    }
+
+    #[test]
+    fn read_file_missing_returns_err() {
+        let td = tempfile::tempdir().unwrap();
+        let rules = td.path().join("rules");
+        std::fs::create_dir(&rules).unwrap();
+        assert!(read_file(&rules, "nonexistent").is_err());
+    }
+
+    #[test]
+    fn read_file_valid_content() {
+        let td = tempfile::tempdir().unwrap();
+        let rules = td.path().join("rules");
+        std::fs::create_dir(&rules).unwrap();
+        std::fs::write(rules.join("my-rules.lsrules"), br#"{"name":"my-rules"}"#).unwrap();
+
+        let result = read_file(&rules, "my-rules").unwrap();
+        assert_eq!(result.name, "my-rules");
+        assert!(result.valid);
+        assert!(result.validation_errors.is_empty());
+    }
+
+    #[test]
+    fn read_file_invalid_json_returns_err() {
+        let td = tempfile::tempdir().unwrap();
+        let rules = td.path().join("rules");
+        std::fs::create_dir(&rules).unwrap();
+        std::fs::write(rules.join("bad.lsrules"), b"not json").unwrap();
+
+        assert!(read_file(&rules, "bad").is_err());
     }
 }
