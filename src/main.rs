@@ -119,6 +119,28 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: ManagedWrite. Writes to managed dir only; no sudo; no live-model effect.
+    #[tool(
+        description = "Update a rule in a managed .lsrules file by zero-based index or by a \
+                       partial match tuple. Provide `file_name`, exactly one of `index` or \
+                       `match_tuple` (to identify the rule), and `updates` (a JSON object \
+                       whose fields are merged into the matched rule — unmentioned fields are \
+                       preserved). Re-validates the file and returns the before/after rule \
+                       and a unified diff."
+    )]
+    async fn update_rule_in_lsrules_file(
+        &self,
+        Parameters(args): Parameters<tools::UpdateRuleArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::update_rule_in_lsrules_file::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
