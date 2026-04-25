@@ -10,6 +10,7 @@ pub mod classification;
 pub mod cli;
 pub mod prefs;
 pub mod registry;
+pub mod schema;
 pub mod token;
 
 pub use classification::Classification;
@@ -19,4 +20,5 @@ pub use prefs::{
     is_kill_switch_key, is_writable, refuse_if_kill_switch, require_writable,
 };
 pub use registry::{TOOLS, ToolMeta};
+pub use schema::{SchemaMismatch, check_bundle_version, extract_bundle_version};
 pub use token::{Session, Token, TokenError, TokenPayload, VerifiedToken, VerifyContext};
