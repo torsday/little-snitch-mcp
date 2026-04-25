@@ -10,6 +10,8 @@ use rmcp::{
 };
 use tracing_subscriber::EnvFilter;
 
+pub mod safety;
+
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct EchoArgs {
     pub message: String,
@@ -35,6 +37,9 @@ impl EchoServer {
         }
     }
 
+    // Classification: SafeRead. Registered in `safety::registry::TOOLS`.
+    // Every new `#[tool]` method MUST have a matching entry there — the
+    // unit tests in `safety::registry` enforce uniqueness and shape.
     #[tool(description = "Echo a message back to the caller. Smoke-test tool for the M0 spike.")]
     async fn echo(
         &self,
