@@ -7,11 +7,13 @@
 //! [#46](https://github.com/torsday/little-snitch-mcp/issues/46) closes.
 
 pub mod classification;
+pub mod cli;
 pub mod prefs;
 pub mod registry;
 pub mod token;
 
 pub use classification::Classification;
+pub use cli::RESTORE_MODEL_TERMINAL_GUARD_FLAG;
 pub use prefs::{
     ALLOWLIST_KEYS, HARD_DENY_KEYS, KillSwitchRefusal, WriteRefusal, WriteStatus,
     is_kill_switch_key, is_writable, refuse_if_kill_switch, require_writable,
