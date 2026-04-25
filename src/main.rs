@@ -12,6 +12,7 @@ use rmcp::{
 use tracing_subscriber::EnvFilter;
 
 pub mod cli;
+pub mod managed_dir;
 pub mod safety;
 pub mod tools;
 
@@ -108,6 +109,9 @@ async fn main() -> Result<()> {
         .init();
 
     tracing::info!("little-snitch-mcp spike: starting stdio server");
+
+    let managed = managed_dir::ManagedDir::bootstrap()?;
+    tracing::info!(root = %managed.root.display(), "managed directory ready");
 
     let service = EchoServer::new().serve(stdio()).await?;
     service.waiting().await?;

@@ -29,3 +29,6 @@ rand = "0.9"
 hex = "0.4"
 regex = "1"
 jsonschema = "0.46"
+
+[dev-dependencies]
+tempfile = "3"
