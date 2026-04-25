@@ -16,5 +16,8 @@ pub mod prefs;
 pub mod registry;
 
 pub use classification::Classification;
-pub use prefs::{HARD_DENY_KEYS, KillSwitchRefusal, is_kill_switch_key, refuse_if_kill_switch};
+pub use prefs::{
+    ALLOWLIST_KEYS, HARD_DENY_KEYS, KillSwitchRefusal, WriteRefusal, WriteStatus,
+    is_kill_switch_key, is_writable, refuse_if_kill_switch, require_writable,
+};
 pub use registry::{TOOLS, ToolMeta};

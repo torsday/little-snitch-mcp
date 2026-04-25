@@ -1,43 +1,41 @@
 //! Preference write gating.
 //!
-//! Encodes the **hard-deny** half of the preference write policy from
+//! Encodes the full preference write policy from
 //! [ADR-0004 §4](../../../docs/adr/0004-safety-permissions-and-confirmation.md):
-//! the set of `globalDefaults` keys whose mutation would either disable
-//! Little Snitch's network filter outright (`networkFilterEnabled`,
-//! `networkFilterControlBits`) or disable LS's own permission gates
-//! (the six `allow*` family keys). These are catastrophic to toggle from
-//! an LLM-driven flow even with a confirmation token, so the gate is
-//! unconditional refusal.
 //!
-//! The matching **allowlist** half (UI/behavior toggles that *are* safe
-//! to write, plus the trichotomous [`is_writable`] dispatch) lands with
-//! [#45](https://github.com/torsday/little-snitch-mcp/issues/45). When
-//! that lands, [`HARD_DENY_KEYS`] becomes the input to its `HardDeny`
-//! arm; nothing here changes.
+//! - [`HARD_DENY_KEYS`] — `globalDefaults` keys that are **always refused**:
+//!   the network-filter kill switches and LS's own permission gates.
+//! - [`ALLOWLIST_KEYS`] — UI/behavior toggles that are **permitted** for
+//!   `write_preference`; everything else is not-in-allowlist.
+//! - [`is_writable`] — the trichotomous dispatch returning
+//!   [`WriteStatus`] (`Allowed | HardDeny | NotInAllowlist`).
+//! - [`WriteRefusal`] — structured error carrying the key and reason,
+//!   consumed by the `write_preference` tool before spawning the CLI.
 //!
-//! # Where this gate must run
+//! # Where these gates must run
 //!
 //! Every code path that could produce a `globalDefaults` mutation:
 //!
-//! 1. The `write_preference` tool (#XX, not yet filed) — refuse before
-//!    spawning the CLI.
+//! 1. The `write_preference` tool ([#56]) — call `is_writable` and
+//!    map non-`Allowed` results to [`WriteRefusal`] before touching the CLI.
 //! 2. Any `restore-model` payload-construction path that touches
 //!    `globalDefaults` — refuse before signing the confirmation token.
-//!    See [#44](https://github.com/torsday/little-snitch-mcp/issues/44)
-//!    for the patch flow.
+//!    See [#44](https://github.com/torsday/little-snitch-mcp/issues/44).
+//!
+//! [#56]: https://github.com/torsday/little-snitch-mcp/issues/56
 
 use thiserror::Error;
 
-/// Preference keys whose mutation is **always refused**.
+/// Preference keys whose mutation is **always refused**, regardless of
+/// confirmation token or other context.
 ///
 /// Sources:
-/// - The six `allow*` keys (LS's own permission gates) are listed in
-///   ADR-0004 §4 ("Hard-deny").
-/// - `networkFilterEnabled` and `networkFilterControlBits` are LS's
-///   master kill switch — toggling either disables the filter.
+/// - The six `allow*` keys (LS's own permission gates) per ADR-0004 §4.
+/// - `networkFilterEnabled` and `networkFilterControlBits` (LS's master
+///   kill switch — toggling either disables the filter entirely).
 ///
-/// Order is alphabetical for stability; consumers should not rely on
-/// it. Membership is the only contract.
+/// Order is alphabetical for stability; consumers must treat membership
+/// as the only contract.
 pub const HARD_DENY_KEYS: &[&str] = &[
     "allowCommandLineAccess",
     "allowGUIScripting",
@@ -45,23 +43,120 @@ pub const HARD_DENY_KEYS: &[&str] = &[
     "allowProfileSwitching",
     "allowRuleAndProfileEditing",
     "allowSettingsEditing",
-    "networkFilterEnabled",
     "networkFilterControlBits",
+    "networkFilterEnabled",
 ];
 
+/// Preference keys that `write_preference` **may** set or remove.
+///
+/// This is the v1 list from ADR-0004 §4: UI/behavior toggles with no
+/// security impact. Any key absent from this list (and not in
+/// [`HARD_DENY_KEYS`]) returns [`WriteStatus::NotInAllowlist`].
+///
+/// Amending this list requires an ADR-0004 update.
+///
+/// Order is alphabetical for stability.
+pub const ALLOWLIST_KEYS: &[&str] = &[
+    "activeSilentMode",
+    "autoConfirmationAction",
+    "autoConfirmationDelay",
+    "confirmAutomatically",
+    "customHierarchyLevels",
+    "dataRateUnitsBitsPerSecond",
+    "defaultRuleLifetimeForCreatingRulesInAlert",
+    "detailLevelPortAndProtocol",
+    "markNewBlocklistEntriesAsUnapproved",
+    "monitorMaxConnectionsInModel",
+];
+
+/// Outcome of [`is_writable`] — three-way classification per ADR-0004 §4.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WriteStatus {
+    /// Key is on the allowlist; `write_preference` may proceed.
+    Allowed,
+    /// Key is in [`HARD_DENY_KEYS`]; refuse unconditionally.
+    HardDeny,
+    /// Key is neither hard-denied nor explicitly allowed; refuse with
+    /// an explanation that points at the allowlist.
+    NotInAllowlist,
+}
+
+/// Classify `key` according to the preference write policy.
+///
+/// Comparison is case-sensitive: LS preference keys are camelCase and
+/// a case-variant is a different, unknown key.
+pub fn is_writable(key: &str) -> WriteStatus {
+    if HARD_DENY_KEYS.contains(&key) {
+        WriteStatus::HardDeny
+    } else if ALLOWLIST_KEYS.contains(&key) {
+        WriteStatus::Allowed
+    } else {
+        WriteStatus::NotInAllowlist
+    }
+}
+
+/// Structured refusal for a `write_preference` attempt that was blocked
+/// by [`is_writable`].
+///
+/// The `Display` impl is the user-facing message returned in the MCP
+/// tool response.
+#[derive(Debug, Clone, Error, PartialEq, Eq)]
+pub enum WriteRefusal {
+    /// Key is in [`HARD_DENY_KEYS`]: unconditional refusal.
+    #[error(
+        "refused to write `{key}` in globalDefaults: this would disable Little Snitch's \
+         filter or permission gates; use the LS GUI if intentional"
+    )]
+    HardDeny {
+        /// The offending preference key.
+        key: String,
+    },
+    /// Key is not in [`ALLOWLIST_KEYS`]: refuse with guidance.
+    #[error(
+        "refused to write `{key}`: not in the preference write allowlist (ADR-0004 §4); \
+         amending the allowlist requires an ADR update"
+    )]
+    NotInAllowlist {
+        /// The preference key that was requested.
+        key: String,
+    },
+}
+
+impl WriteRefusal {
+    /// Convert a non-`Allowed` [`WriteStatus`] for `key` into a
+    /// [`WriteRefusal`]. Panics if called with `WriteStatus::Allowed`.
+    pub fn from_status(status: WriteStatus, key: impl Into<String>) -> Self {
+        match status {
+            WriteStatus::Allowed => panic!("WriteRefusal::from_status called with Allowed"),
+            WriteStatus::HardDeny => WriteRefusal::HardDeny { key: key.into() },
+            WriteStatus::NotInAllowlist => WriteRefusal::NotInAllowlist { key: key.into() },
+        }
+    }
+}
+
+/// Convenience: check `key` and return `Err(WriteRefusal)` if the write
+/// is not permitted, else `Ok(())`. Use at the `write_preference` call
+/// site before spawning any CLI command.
+pub fn require_writable(key: &str) -> Result<(), WriteRefusal> {
+    match is_writable(key) {
+        WriteStatus::Allowed => Ok(()),
+        status => Err(WriteRefusal::from_status(status, key)),
+    }
+}
+
 /// True if writing `key` to `globalDefaults` would trip a kill-switch
-/// guard. Comparison is case-sensitive: LS preference keys are
-/// camelCase and an uppercase variant is not the same key.
+/// guard. Kept for callers that only need the hard-deny check (e.g.,
+/// `restore-model` payload validation, which runs before the allowlist
+/// check).
 pub fn is_kill_switch_key(key: &str) -> bool {
     HARD_DENY_KEYS.contains(&key)
 }
 
 /// Refusal returned to the caller when a kill-switch write is attempted.
 ///
-/// The `Display` impl is the user-facing message; it deliberately tells
-/// the operator to use the LS GUI if the action is intentional, since
-/// any intentional kill-switch toggle should leave a human-visible
-/// audit trail.
+/// Retained for the `restore-model` path which checks kill-switches
+/// independently of the `write_preference` allowlist. New code should
+/// prefer [`WriteRefusal`] + [`require_writable`].
 #[derive(Debug, Clone, Error, PartialEq, Eq)]
 #[error(
     "refused to write `{key}` in globalDefaults: this would disable Little Snitch's filter; \
@@ -73,17 +168,13 @@ pub struct KillSwitchRefusal {
 }
 
 impl KillSwitchRefusal {
-    /// Construct a refusal for `key`. Caller is responsible for having
-    /// already confirmed `is_kill_switch_key(key)`; this is a typed
-    /// carrier, not a re-checker.
     pub fn new(key: impl Into<String>) -> Self {
         Self { key: key.into() }
     }
 }
 
 /// Convenience: check `key` and return `Err(KillSwitchRefusal)` if
-/// banned, else `Ok(())`. Use at the call site that's about to issue
-/// the write — the typed error makes the audit chain obvious.
+/// banned, else `Ok(())`.
 pub fn refuse_if_kill_switch(key: &str) -> Result<(), KillSwitchRefusal> {
     if is_kill_switch_key(key) {
         Err(KillSwitchRefusal::new(key))
@@ -96,6 +187,132 @@ pub fn refuse_if_kill_switch(key: &str) -> Result<(), KillSwitchRefusal> {
 mod tests {
     use super::*;
     use std::collections::HashSet;
+
+    // ── ALLOWLIST_KEYS ──────────────────────────────────────────────────
+
+    #[test]
+    fn allowlist_has_exactly_ten_entries_with_no_dupes() {
+        assert_eq!(ALLOWLIST_KEYS.len(), 10);
+        let unique: HashSet<&&str> = ALLOWLIST_KEYS.iter().collect();
+        assert_eq!(unique.len(), ALLOWLIST_KEYS.len());
+    }
+
+    #[test]
+    fn allowlist_contains_all_adr_0004_v1_keys() {
+        for key in [
+            "activeSilentMode",
+            "autoConfirmationAction",
+            "autoConfirmationDelay",
+            "confirmAutomatically",
+            "customHierarchyLevels",
+            "dataRateUnitsBitsPerSecond",
+            "defaultRuleLifetimeForCreatingRulesInAlert",
+            "detailLevelPortAndProtocol",
+            "markNewBlocklistEntriesAsUnapproved",
+            "monitorMaxConnectionsInModel",
+        ] {
+            assert!(
+                ALLOWLIST_KEYS.contains(&key),
+                "{key} must be in ALLOWLIST_KEYS per ADR-0004 §4"
+            );
+        }
+    }
+
+    #[test]
+    fn allowlist_and_hard_deny_are_disjoint() {
+        for key in ALLOWLIST_KEYS {
+            assert!(
+                !HARD_DENY_KEYS.contains(key),
+                "{key} appears in both ALLOWLIST_KEYS and HARD_DENY_KEYS"
+            );
+        }
+    }
+
+    // ── is_writable / WriteStatus ───────────────────────────────────────
+
+    #[test]
+    fn allowed_keys_return_allowed() {
+        for key in ALLOWLIST_KEYS {
+            assert_eq!(
+                is_writable(key),
+                WriteStatus::Allowed,
+                "{key} should be Allowed"
+            );
+        }
+    }
+
+    #[test]
+    fn hard_deny_keys_return_hard_deny() {
+        for key in HARD_DENY_KEYS {
+            assert_eq!(
+                is_writable(key),
+                WriteStatus::HardDeny,
+                "{key} should be HardDeny"
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_key_returns_not_in_allowlist() {
+        assert_eq!(is_writable("someUnknownPref"), WriteStatus::NotInAllowlist);
+        assert_eq!(is_writable(""), WriteStatus::NotInAllowlist);
+    }
+
+    #[test]
+    fn is_writable_is_case_sensitive() {
+        assert_eq!(is_writable("activeSilentMode"), WriteStatus::Allowed);
+        assert_eq!(is_writable("ActiveSilentMode"), WriteStatus::NotInAllowlist);
+        assert_eq!(is_writable("networkFilterEnabled"), WriteStatus::HardDeny);
+        assert_eq!(is_writable("NetworkFilterEnabled"), WriteStatus::NotInAllowlist);
+    }
+
+    // ── require_writable / WriteRefusal ────────────────────────────────
+
+    #[test]
+    fn require_writable_passes_allowlisted_keys() {
+        assert!(require_writable("activeSilentMode").is_ok());
+        assert!(require_writable("confirmAutomatically").is_ok());
+    }
+
+    #[test]
+    fn require_writable_rejects_hard_deny_with_hard_deny_variant() {
+        let err = require_writable("networkFilterEnabled").unwrap_err();
+        assert!(matches!(err, WriteRefusal::HardDeny { .. }));
+        if let WriteRefusal::HardDeny { key } = err {
+            assert_eq!(key, "networkFilterEnabled");
+        }
+    }
+
+    #[test]
+    fn require_writable_rejects_unknown_with_not_in_allowlist_variant() {
+        let err = require_writable("someFuturePreference").unwrap_err();
+        assert!(matches!(err, WriteRefusal::NotInAllowlist { .. }));
+        if let WriteRefusal::NotInAllowlist { key } = err {
+            assert_eq!(key, "someFuturePreference");
+        }
+    }
+
+    #[test]
+    fn write_refusal_hard_deny_message_names_key_and_cites_gui() {
+        let msg = WriteRefusal::HardDeny {
+            key: "allowCommandLineAccess".into(),
+        }
+        .to_string();
+        assert!(msg.contains("allowCommandLineAccess"));
+        assert!(msg.contains("LS GUI"));
+    }
+
+    #[test]
+    fn write_refusal_not_in_allowlist_message_names_key_and_cites_adr() {
+        let msg = WriteRefusal::NotInAllowlist {
+            key: "dnsEncryptionMode".into(),
+        }
+        .to_string();
+        assert!(msg.contains("dnsEncryptionMode"));
+        assert!(msg.contains("ADR-0004"));
+    }
+
+    // ── HARD_DENY_KEYS (existing tests, preserved) ──────────────────────
 
     #[test]
     fn hard_deny_keys_includes_network_filter_master_switch() {
@@ -166,17 +383,8 @@ mod tests {
     #[test]
     fn refusal_message_names_the_key_and_recommends_gui() {
         let msg = KillSwitchRefusal::new("allowCommandLineAccess").to_string();
-        assert!(
-            msg.contains("allowCommandLineAccess"),
-            "message must name the offending key, got: {msg}"
-        );
-        assert!(
-            msg.contains("disable Little Snitch's filter"),
-            "message must explain the consequence, got: {msg}"
-        );
-        assert!(
-            msg.contains("LS GUI"),
-            "message must point at the GUI as the intentional path, got: {msg}"
-        );
+        assert!(msg.contains("allowCommandLineAccess"));
+        assert!(msg.contains("disable Little Snitch's filter"));
+        assert!(msg.contains("LS GUI"));
     }
 }
