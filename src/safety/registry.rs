@@ -36,6 +36,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "validate_lsrules",
         classification: Classification::SafeRead,
     },
+    ToolMeta {
+        name: "create_lsrules_file",
+        classification: Classification::ManagedWrite,
+    },
 ];
 
 /// Look up a tool's metadata by name.

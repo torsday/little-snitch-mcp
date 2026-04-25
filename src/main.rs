@@ -75,6 +75,27 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: ManagedWrite. Writes to managed dir only; no sudo; no live-model effect.
+    #[tool(
+        description = "Create a new .lsrules file in the managed directory. \
+                       Provide `name` (used as the filename), optional `description`, \
+                       optional `denied_remote_domains` list, and optional `rules` array. \
+                       The content is validated against the lsrules schema before writing. \
+                       Refuses to overwrite an existing file unless `replace: true` is passed."
+    )]
+    async fn create_lsrules_file(
+        &self,
+        Parameters(args): Parameters<tools::CreateLsrulesArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::create_lsrules_file::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]

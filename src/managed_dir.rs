@@ -94,76 +94,58 @@ fn ensure_dir_700(path: &Path) -> Result<(), ManagedDirError> {
     Ok(())
 }
 
+/// Serializes all tests that mutate `LSMCP_MANAGED_DIR` across the crate.
+/// Import this lock in any test module that calls `std::env::set_var(ENV_MANAGED_DIR, …)`.
+#[cfg(test)]
+pub(crate) static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::fs;
 
-    fn temp_root() -> tempfile::TempDir {
-        tempfile::tempdir().expect("tempdir")
+    fn with_temp_managed<F: FnOnce(ManagedDir)>(f: F) {
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = tempfile::tempdir().unwrap();
+        // SAFETY: protected by ENV_LOCK; no concurrent env mutation across the crate.
+        unsafe { std::env::set_var(ENV_MANAGED_DIR, td.path().join("mcp")); }
+        let dir = ManagedDir::bootstrap().unwrap();
+        f(dir);
+        unsafe { std::env::remove_var(ENV_MANAGED_DIR); }
     }
 
     #[test]
     fn bootstrap_creates_subdirs() {
-        let td = temp_root();
-        let root = td.path().join("mcp");
-        // SAFETY: single-threaded test; no other threads read this env var concurrently.
-        unsafe {
-            std::env::set_var(ENV_MANAGED_DIR, &root);
-        }
-        let dir = ManagedDir::bootstrap().unwrap();
-        assert!(dir.root.is_dir());
-        assert!(dir.rules.is_dir());
-        assert!(dir.backups.is_dir());
-        unsafe {
-            std::env::remove_var(ENV_MANAGED_DIR);
-        }
+        with_temp_managed(|dir| {
+            assert!(dir.root.is_dir());
+            assert!(dir.rules.is_dir());
+            assert!(dir.backups.is_dir());
+        });
     }
 
     #[test]
     fn bootstrap_sets_mode_700() {
-        let td = temp_root();
-        let root = td.path().join("mcp2");
-        unsafe {
-            std::env::set_var(ENV_MANAGED_DIR, &root);
-        }
-        let dir = ManagedDir::bootstrap().unwrap();
-        for d in [&dir.root, &dir.rules, &dir.backups] {
-            let mode = fs::metadata(d).unwrap().permissions().mode() & 0o777;
-            assert_eq!(mode, 0o700, "expected 700 on {d:?}, got {mode:o}");
-        }
-        unsafe {
-            std::env::remove_var(ENV_MANAGED_DIR);
-        }
+        with_temp_managed(|dir| {
+            for d in [&dir.root, &dir.rules, &dir.backups] {
+                let mode = fs::metadata(d).unwrap().permissions().mode() & 0o777;
+                assert_eq!(mode, 0o700, "expected 700 on {d:?}, got {mode:o}");
+            }
+        });
     }
 
     #[test]
     fn bootstrap_is_idempotent() {
-        let td = temp_root();
-        let root = td.path().join("mcp3");
-        unsafe {
-            std::env::set_var(ENV_MANAGED_DIR, &root);
-        }
-        assert!(ManagedDir::bootstrap().is_ok());
-        assert!(ManagedDir::bootstrap().is_ok()); // second call must not error
-        unsafe {
-            std::env::remove_var(ENV_MANAGED_DIR);
-        }
+        with_temp_managed(|_| {
+            assert!(ManagedDir::bootstrap().is_ok());
+        });
     }
 
     #[test]
     fn lsrules_file_path_has_extension() {
-        let td = temp_root();
-        let root = td.path().join("mcp4");
-        unsafe {
-            std::env::set_var(ENV_MANAGED_DIR, &root);
-        }
-        let dir = ManagedDir::bootstrap().unwrap();
-        let path = dir.lsrules_file("my-rules");
-        assert_eq!(path.file_name().unwrap(), "my-rules.lsrules");
-        assert_eq!(path.parent().unwrap(), dir.rules);
-        unsafe {
-            std::env::remove_var(ENV_MANAGED_DIR);
-        }
+        with_temp_managed(|dir| {
+            let path = dir.lsrules_file("my-rules");
+            assert_eq!(path.file_name().unwrap(), "my-rules.lsrules");
+            assert_eq!(path.parent().unwrap(), dir.rules);
+        });
     }
 }
