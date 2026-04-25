@@ -180,6 +180,28 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SudoRead. Reads preferences via CLI; requires sudo; no mutation.
+    #[tool(
+        description = "Read one or more Little Snitch preferences by key. Provide a list of \
+                       key names (dot-separated paths into globalDefaults, e.g. \
+                       `\"allowCitrixMode\"`). Returns a map of key → value; a null value \
+                       indicates the key is not present. Note: the CLI returns exit 0 even \
+                       for missing keys — the JSON output is inspected, not the exit code. \
+                       Requires that the CLI is authorized and running as root (sudo)."
+    )]
+    async fn read_preference(
+        &self,
+        Parameters(args): Parameters<tools::ReadPreferenceArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::read_preference::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
