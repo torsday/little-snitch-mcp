@@ -1,0 +1,66 @@
+{
+  "name": "little-snitch-mcp sample rules",
+  "description": "Hand-crafted sample exercising every schema field. Not for production use.",
+  "rules": [
+    {
+      "action": "deny",
+      "process": "/Applications/Slack.app/Contents/MacOS/Slack",
+      "remote-hosts": "evil.example",
+      "direction": "outgoing",
+      "priority": "high",
+      "notes": "Block Slack from reaching a known-bad host."
+    },
+    {
+      "action": "allow",
+      "process": "/usr/bin/curl",
+      "remote-domains": ["api.example.com", "cdn.example.com"],
+      "direction": "outgoing",
+      "ports": "443",
+      "protocol": "tcp"
+    },
+    {
+      "action": "deny",
+      "process": "any",
+      "remote-addresses": ["203.0.113.0/24", "198.51.100.42"],
+      "direction": "both",
+      "notes": "Block TEST-NET addresses (RFC 5737) in both directions."
+    },
+    {
+      "action": "allow",
+      "requiresTrustedSignatureForAnyProcess": true,
+      "remote": "dns-servers",
+      "direction": "outgoing",
+      "ports": "53",
+      "protocol": "udp",
+      "notes": "Allow any code-signed process to reach DNS."
+    },
+    {
+      "action": "ask",
+      "process": "/usr/bin/python3",
+      "remote": "any",
+      "direction": "outgoing",
+      "disabled": true,
+      "notes": "Prompt for Python outbound — currently disabled."
+    },
+    {
+      "action": "deny",
+      "process": "/Applications/Terminal.app/Contents/MacOS/Terminal",
+      "remote-hosts": "malware.invalid",
+      "via": "/bin/bash",
+      "direction": "outgoing",
+      "ports": "80,443",
+      "protocol": "tcp"
+    }
+  ],
+  "denied-remote-domains": [
+    "tracker.example",
+    "ads.example"
+  ],
+  "denied-remote-hosts": [
+    "telemetry.vendor.example"
+  ],
+  "denied-remote-addresses": [
+    "192.0.2.0/24"
+  ],
+  "denied-remote-notes": "Blanket denies applied before any per-process rule is evaluated."
+}

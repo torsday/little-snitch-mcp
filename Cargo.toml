@@ -1,0 +1,47 @@
+[package]
+name = "little-snitch-mcp"
+version = "0.1.0"
+edition = "2024"
+description = "MCP server for safely managing Little Snitch rules from an LLM."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/torsday/little-snitch-mcp"
+homepage = "https://github.com/torsday/little-snitch-mcp"
+readme = "README.md"
+keywords = ["mcp", "little-snitch", "firewall", "macos"]
+categories = ["command-line-utilities"]
+
+[lib]
+name = "little_snitch_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "little-snitch-mcp"
+path = "src/main.rs"
+
+[dependencies]
+rmcp = { version = "1.5", features = ["server", "macros", "transport-io", "schemars"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "signal", "process", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1"
+anyhow = "1"
+thiserror = "2"
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+hmac = "0.12"
+sha2 = "0.10"
+subtle = "2"
+rand = "0.9"
+hex = "0.4"
+regex = "1"
+# default features include `resolve-http`, which transitively pulls in
+# `reqwest` + `rustls`. We validate against a single embedded schema with no
+# remote `$ref`s, so we disable defaults to keep the no-network invariant.
+# See deny.toml and the README "Hard guarantees" section.
+jsonschema = { version = "0.46", default-features = false }
+similar = "2"
+ipnet = "2"
+
+[dev-dependencies]
+tempfile = "3"

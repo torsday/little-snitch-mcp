@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Mock `littlesnitch` binary for CLI adapter integration tests.
+#
+# Behavior:
+# - Writes received args (space-joined) to $MOCK_ARGS_FILE when set.
+# - Routes on the first argument (subcommand) and returns canned output.
+# - Exits non-zero for specific "trigger" inputs to exercise error mapping.
+
+set -euo pipefail
+
+if [ -n "${MOCK_ARGS_FILE:-}" ]; then
+  echo "$*" >> "$MOCK_ARGS_FILE"
+fi
+
+SUBCOMMAND="${1:-}"
+
+case "$SUBCOMMAND" in
+
+  # ── export-model ─────────────────────────────────────────────────────
+  "export-model")
+    # Minimal valid model JSON written to the path argument (if provided).
+    if [ -n "${2:-}" ]; then
+      cat > "$2" <<'JSON'
+{"bundleVersion":1,"factoryRuleSetVersion":1,"rules":[],"groups":{},"profiles":{},"noProfilePseudoProfile":null,"globalDefaults":{},"users":[],"codeRequirements":{},"developerTeamNames":{}}
+JSON
+    else
+      # No path: print to stdout (for tools that read from stdout).
+      echo '{"bundleVersion":1,"factoryRuleSetVersion":1,"rules":[],"groups":{},"profiles":{},"noProfilePseudoProfile":null,"globalDefaults":{},"users":[],"codeRequirements":{},"developerTeamNames":{}}'
+    fi
+    exit 0
+    ;;
+
+  # ── restore-model ─────────────────────────────────────────────────────
+  "restore-model")
+    # Accept any args; just succeed.
+    exit 0
+    ;;
+
+  # ── log ──────────────────────────────────────────────────────────────
+  "log")
+    if [ "${MOCK_LOG_FAIL:-}" = "1" ]; then
+      echo "Error: command line tool is not authorized" >&2
+      exit 1
+    fi
+    # Two canned JSON-log lines.
+    echo '{"time":"2024-01-15T12:00:00Z","process":"/usr/bin/curl","remote":"93.184.216.34","direction":"outgoing","verdict":"allow","rule":"test-rule"}'
+    echo '{"time":"2024-01-15T12:00:01Z","process":"/usr/bin/curl","remote":"93.184.216.35","direction":"outgoing","verdict":"allow","rule":"test-rule"}'
+    exit 0
+    ;;
+
+  # ── rulegroup ────────────────────────────────────────────────────────
+  "rulegroup")
+    FLAG="${2:-}"
+    NAME="${3:-}"
+    if [ "${MOCK_RULEGROUP_FAIL:-}" = "1" ]; then
+      echo "Error: Rule group or blocklist \"$NAME\" not found" >&2
+      exit 1
+    fi
+    case "$FLAG" in
+      "-e"|"-d") exit 0 ;;
+      *) echo "Unknown rulegroup flag: $FLAG" >&2; exit 1 ;;
+    esac
+    ;;
+
+  # ── profile ──────────────────────────────────────────────────────────
+  "profile")
+    FLAG="${2:-}"
+    if [ "${MOCK_PROFILE_FAIL:-}" = "1" ]; then
+      echo "Error: must be run as root" >&2
+      exit 1
+    fi
+    case "$FLAG" in
+      "-a"|"-d") exit 0 ;;
+      *) echo "Unknown profile flag: $FLAG" >&2; exit 1 ;;
+    esac
+    ;;
+
+  # ── list-preferences / prefs ─────────────────────────────────────────
+  "list-preferences"|"prefs")
+    if [ "${MOCK_PREFS_FAIL:-}" = "1" ]; then
+      echo "Error: command line tool is not authorized" >&2
+      exit 1
+    fi
+    # Minimal prefs JSON
+    echo '{"allowCitrixMode":false,"alwaysDisplayEditorAtLoginWindow":false}'
+    exit 0
+    ;;
+
+  # ── write-preference ─────────────────────────────────────────────────
+  "write-preference")
+    exit 0
+    ;;
+
+  # ── catch-all ────────────────────────────────────────────────────────
+  *)
+    echo "mock_littlesnitch: unknown subcommand '$SUBCOMMAND'" >&2
+    exit 1
+    ;;
+
+esac
