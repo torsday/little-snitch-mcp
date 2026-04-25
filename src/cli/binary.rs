@@ -134,14 +134,13 @@ mod tests {
 
     #[test]
     fn env_override_path_appears_in_error_when_absent() {
-        let err = resolve_binary_with(
-            Some("/bad/path/littlesnitch".into()),
-            not_found,
-            no_which,
-        )
-        .unwrap_err();
+        let err = resolve_binary_with(Some("/bad/path/littlesnitch".into()), not_found, no_which)
+            .unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("LSMCP_LS_BIN=/bad/path/littlesnitch"), "got: {msg}");
+        assert!(
+            msg.contains("LSMCP_LS_BIN=/bad/path/littlesnitch"),
+            "got: {msg}"
+        );
     }
 
     // ── branch 2: first canonical path ─────────────────────────────────
@@ -167,11 +166,7 @@ mod tests {
     #[test]
     fn which_result_returned_when_canonical_paths_absent() {
         let which_path = PathBuf::from("/usr/local/bin/littlesnitch");
-        let result = resolve_binary_with(
-            None,
-            not_found,
-            || Some(which_path.clone()),
-        );
+        let result = resolve_binary_with(None, not_found, || Some(which_path.clone()));
         assert_eq!(result.unwrap(), which_path);
     }
 
@@ -181,8 +176,14 @@ mod tests {
     fn error_lists_all_attempted_paths_when_nothing_found() {
         let err = resolve_binary_with(None, not_found, no_which).unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains(CANONICAL_PATHS[0]), "missing canonical[0]: {msg}");
-        assert!(msg.contains(CANONICAL_PATHS[1]), "missing canonical[1]: {msg}");
+        assert!(
+            msg.contains(CANONICAL_PATHS[0]),
+            "missing canonical[0]: {msg}"
+        );
+        assert!(
+            msg.contains(CANONICAL_PATHS[1]),
+            "missing canonical[1]: {msg}"
+        );
         assert!(msg.contains("`which littlesnitch`"), "missing which: {msg}");
     }
 
@@ -195,12 +196,7 @@ mod tests {
 
     #[test]
     fn error_attempted_has_extra_entry_when_env_override_present_but_absent() {
-        let err = resolve_binary_with(
-            Some("/missing".into()),
-            not_found,
-            no_which,
-        )
-        .unwrap_err();
+        let err = resolve_binary_with(Some("/missing".into()), not_found, no_which).unwrap_err();
         // env + 2 canonical + 1 which = 4
         assert_eq!(err.attempted.len(), 4);
     }

@@ -263,7 +263,10 @@ mod tests {
         assert_eq!(is_writable("activeSilentMode"), WriteStatus::Allowed);
         assert_eq!(is_writable("ActiveSilentMode"), WriteStatus::NotInAllowlist);
         assert_eq!(is_writable("networkFilterEnabled"), WriteStatus::HardDeny);
-        assert_eq!(is_writable("NetworkFilterEnabled"), WriteStatus::NotInAllowlist);
+        assert_eq!(
+            is_writable("NetworkFilterEnabled"),
+            WriteStatus::NotInAllowlist
+        );
     }
 
     // ── require_writable / WriteRefusal ────────────────────────────────
