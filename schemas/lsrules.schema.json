@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/torsday/little-snitch-mcp/schemas/lsrules.schema.json",
+  "title": "Little Snitch Rule Group (.lsrules)",
+  "description": "Schema for Little Snitch 6 .lsrules rule-group files. These files are imported or subscribed to via the GUI or apply_lsrules_file_to_live_model; they are NOT the same format as the export-model JSON.",
+  "type": "object",
+  "required": ["name"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name of the rule group as it appears in the Little Snitch UI."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional human-readable description shown in the rule group details pane."
+    },
+    "rules": {
+      "type": "array",
+      "description": "Individual connection rules in this group.",
+      "items": { "$ref": "#/definitions/rule" },
+      "default": []
+    },
+    "denied-remote-domains": {
+      "type": "array",
+      "description": "Compact domain blocklist. All connections to these domains are denied for any process.",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "denied-remote-hosts": {
+      "type": "array",
+      "description": "Compact hostname blocklist. All connections to these hostnames are denied for any process.",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "denied-remote-addresses": {
+      "type": "array",
+      "description": "Compact IP/CIDR blocklist. All connections to these addresses are denied for any process.",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "denied-remote-notes": {
+      "type": "string",
+      "description": "Annotation for the denied-remote-* lists; shown in the UI alongside the deny entries."
+    }
+  },
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "description": "A single Little Snitch connection rule.",
+      "required": ["action"],
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["allow", "deny", "ask"],
+          "description": "What to do when the rule matches: allow, deny, or prompt the user."
+        },
+        "process": {
+          "type": "string",
+          "description": "Absolute path to the process binary, or the special value \"any\" to match all processes. Mutually exclusive with requiresTrustedSignatureForAnyProcess.",
+          "examples": ["/Applications/Slack.app/Contents/MacOS/Slack", "any"]
+        },
+        "requiresTrustedSignatureForAnyProcess": {
+          "type": "boolean",
+          "description": "When true, matches any process that carries a valid Apple code signature. Used for system-level rules. Mutually exclusive with \"process\".",
+          "const": true
+        },
+        "remote": {
+          "type": "string",
+          "enum": ["any", "local-net", "multicast", "broadcast", "bonjour", "dns-servers", "bpf"],
+          "description": "Special named remote endpoint. Mutually exclusive with remote-domains, remote-hosts, and remote-addresses."
+        },
+        "remote-domains": {
+          "description": "Domain or list of domains to match. A single domain may be given as a string; multiple domains as an array.",
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+          ]
+        },
+        "remote-hosts": {
+          "description": "Hostname or list of hostnames to match.",
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+          ]
+        },
+        "remote-addresses": {
+          "description": "IP address, CIDR range, or list thereof to match.",
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["outgoing", "incoming", "both"],
+          "description": "Connection direction to match. Defaults to \"outgoing\" when absent.",
+          "default": "outgoing"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["regular", "high"],
+          "description": "Rule priority. High-priority rules are evaluated before regular ones. Defaults to \"regular\" when absent.",
+          "default": "regular"
+        },
+        "ports": {
+          "type": "string",
+          "description": "Port or port range to match: a single port (\"443\"), a comma-separated list (\"80,443\"), or a range (\"8080-8090\").",
+          "examples": ["443", "80,443", "8080-8090"]
+        },
+        "protocol": {
+          "type": "string",
+          "enum": ["tcp", "udp", "any"],
+          "description": "Transport protocol to match. Defaults to \"any\" when absent.",
+          "default": "any"
+        },
+        "via": {
+          "type": "string",
+          "description": "Absolute path of the parent process that must be present for the rule to match (e.g. a launcher or shell)."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "When true the rule is stored but not evaluated. Useful for temporarily suppressing a rule."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-text annotation visible in the Little Snitch UI."
+        }
+      }
+    }
+  }
+}
