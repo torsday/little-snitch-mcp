@@ -32,7 +32,10 @@ pub struct AddRuleResult {
 
 pub fn run(args: AddRuleArgs) -> Result<AddRuleResult, String> {
     if args.file_name.is_empty() || args.file_name.contains('/') || args.file_name.contains('\\') {
-        return Err(format!("invalid file_name {:?}", args.file_name));
+        return Err(format!(
+            "invalid file_name {:?}: must be a plain filename with no path separators or backslashes",
+            args.file_name
+        ));
     }
 
     if args.rule.as_object().is_none() {
@@ -44,7 +47,9 @@ pub fn run(args: AddRuleArgs) -> Result<AddRuleResult, String> {
 
     let target = managed.lsrules_file(&args.file_name);
     if !target.exists() {
-        return Err(format!("file not found: {target:?}"));
+        return Err(format!(
+            "file not found: {target:?} — use create_lsrules_file to create it first"
+        ));
     }
 
     let raw =
