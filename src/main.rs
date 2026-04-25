@@ -4,7 +4,9 @@ use rmcp::{
     ErrorData as McpError, ServerHandler, ServiceExt,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::{
-        CallToolResult, Content, Implementation, ProtocolVersion, ServerCapabilities, ServerInfo,
+        Annotated, CallToolResult, Content, Implementation, ListResourcesResult,
+        PaginatedRequestParams, ProtocolVersion, RawResource, ReadResourceRequestParams,
+        ReadResourceResult, ResourceContents, ServerCapabilities, ServerInfo,
     },
     schemars, tool, tool_handler, tool_router,
     transport::stdio,
@@ -13,6 +15,7 @@ use tracing_subscriber::EnvFilter;
 
 pub mod cli;
 pub mod managed_dir;
+pub mod resources;
 pub mod safety;
 pub mod tools;
 
@@ -103,17 +106,71 @@ impl ServerHandler for EchoServer {
     fn get_info(&self) -> ServerInfo {
         let mut info = ServerInfo::default();
         info.protocol_version = ProtocolVersion::V_2025_03_26;
-        info.capabilities = ServerCapabilities::builder().enable_tools().build();
+        info.capabilities = ServerCapabilities::builder()
+            .enable_tools()
+            .enable_resources()
+            .build();
         let mut impl_info = Implementation::from_build_env();
         impl_info.name = env!("CARGO_PKG_NAME").into();
         impl_info.version = env!("CARGO_PKG_VERSION").into();
         info.server_info = impl_info;
         info.instructions = Some(
-            "little-snitch-mcp spike server. Exposes one `echo` tool to validate \
-             rmcp + #[tool] macro ergonomics over stdio."
+            "MCP server for safely managing Little Snitch rules from an LLM."
                 .into(),
         );
         info
+    }
+
+    async fn list_resources(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<ListResourcesResult, McpError> {
+        let resource = Annotated {
+            raw: RawResource {
+                uri: resources::lsrules_files::URI.to_string(),
+                name: "lsrules-files".to_string(),
+                title: Some("Managed .lsrules files".to_string()),
+                description: Some(
+                    "Lists all .lsrules rule-group files in the managed rules directory."
+                        .to_string(),
+                ),
+                mime_type: Some("application/json".to_string()),
+                size: None,
+                icons: None,
+                meta: None,
+            },
+            annotations: None,
+        };
+        Ok(ListResourcesResult::with_all_items(vec![resource]))
+    }
+
+    async fn read_resource(
+        &self,
+        request: ReadResourceRequestParams,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<ReadResourceResult, McpError> {
+        if request.uri != resources::lsrules_files::URI {
+            return Err(McpError::invalid_params(
+                format!("unknown resource URI: {}", request.uri),
+                None,
+            ));
+        }
+
+        let managed = managed_dir::ManagedDir::bootstrap().map_err(|e| {
+            McpError::internal_error(format!("managed directory error: {e}"), None)
+        })?;
+
+        let entries = resources::lsrules_files::list(&managed.rules)
+            .map_err(|e| McpError::internal_error(e, None))?;
+
+        let json = serde_json::to_string_pretty(&entries)
+            .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+
+        Ok(ReadResourceResult::new(vec![ResourceContents::text(
+            json,
+            resources::lsrules_files::URI,
+        )]))
     }
 }
 
