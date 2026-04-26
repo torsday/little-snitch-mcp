@@ -8,6 +8,7 @@ pub mod classification;
 pub mod cli;
 pub mod prefs;
 pub mod registry;
+pub mod resolver;
 pub mod rules;
 pub mod schema;
 pub mod secret_prefs;
@@ -22,6 +23,7 @@ pub use prefs::{
     is_kill_switch_key, is_writable, refuse_if_kill_switch, require_writable,
 };
 pub use registry::{TOOLS, ToolMeta};
+pub use resolver::{ResolveResult, SEED_KIND_MAP, lookup_seed, resolve_group};
 pub use rules::{GuardResult, Intent, guard};
 pub use schema::{SchemaMismatch, check_bundle_version, extract_bundle_version};
 pub use sudo_mode::{
