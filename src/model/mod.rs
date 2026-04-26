@@ -26,9 +26,14 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+pub mod patch;
 pub mod rule;
 pub mod rule_construct;
 
+pub use patch::{
+    PatchError, RulePatch, apply_partial, apply_partial_at, canonical_json, canonical_value,
+    update_rule, update_rule_at,
+};
 pub use rule::{Action, Direction, Origin, Priority, RemoteOverlayEntry, Rule, StringOrVec};
 pub use rule_construct::{
     ConstructError, NewRuleSpec, ProcessMatcher, Remote, construct, construct_at,
