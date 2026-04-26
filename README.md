@@ -68,6 +68,33 @@ Read in this order:
    - [0005 — deployment and configuration](docs/adr/0005-deployment-and-configuration.md)
    - [0006 — sudo strategy and no-TTY handling](docs/adr/0006-sudo-strategy-and-no-tty-handling.md)
 
+## Release and distribution
+
+Releases are built by the [GitHub Actions release workflow](.github/workflows/release.yml), which produces notarized, stapled binaries for both `aarch64-apple-darwin` (Apple Silicon) and `x86_64-apple-darwin` (Intel).
+
+### Setting up Apple Developer secrets
+
+The notarization step requires five repository secrets. Set them in **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Value |
+|---|---|
+| `APPLE_ID` | Your Apple ID email address (e.g. `you@example.com`) |
+| `APPLE_TEAM_ID` | Your 10-character Apple Developer Team ID (found in [developer.apple.com/account](https://developer.apple.com/account) under Membership) |
+| `APPLE_APP_SPECIFIC_PASSWORD` | An app-specific password generated at [appleid.apple.com](https://appleid.apple.com) → Security → App-Specific Passwords |
+| `MACOS_CERTIFICATE` | Base64-encoded Developer ID Application certificate (`.p12`). Export from Keychain Access, then: `base64 -i Certificate.p12 \| pbcopy` |
+| `MACOS_CERTIFICATE_PWD` | The passphrase you set when exporting the `.p12` |
+
+The certificate must be a **Developer ID Application** certificate (not Mac App Store). If you don't have one, request it at [developer.apple.com/account/resources/certificates](https://developer.apple.com/account/resources/certificates).
+
+### Release process
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actions builds both architectures, signs each binary, submits to Apple's notarization service, staples the ticket, and publishes the release assets.
+
 ## Reference material
 
 The CLI we're targeting: [Little Snitch 6 command line overview](https://help.obdev.at/littlesnitch6/cmd-overview) (with [LS5's per-command flag reference](https://help.obdev.at/littlesnitch5/adv-commandline) still applicable for the commands shared between versions).
