@@ -80,6 +80,22 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "show_restrictions",
         classification: Classification::SudoRead,
     },
+    ToolMeta {
+        name: "prepare_write_preference",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "write_preference",
+        classification: Classification::LiveWrite,
+    },
+    ToolMeta {
+        name: "prepare_remove_preference",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "remove_preference",
+        classification: Classification::LiveWrite,
+    },
 ];
 
 /// Look up a tool's metadata by name.

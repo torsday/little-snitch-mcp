@@ -14,7 +14,8 @@ use rmcp::{
 };
 use tracing_subscriber::EnvFilter;
 
-use little_snitch_mcp::{cli, managed_dir, resources, tools};
+use little_snitch_mcp::{cli, managed_dir, resources, safety, tools};
+use std::sync::Arc;
 
 #[derive(Parser)]
 #[command(name = env!("CARGO_PKG_NAME"), version, about = env!("CARGO_PKG_DESCRIPTION"))]
@@ -28,19 +29,21 @@ pub struct EchoArgs {
 pub struct EchoServer {
     #[allow(dead_code)] // read by the #[tool_handler] macro expansion
     tool_router: ToolRouter<EchoServer>,
+    session: Arc<safety::Session>,
 }
 
 impl Default for EchoServer {
     fn default() -> Self {
-        Self::new()
+        Self::new(Arc::new(safety::Session::new().expect("OS RNG unavailable")))
     }
 }
 
 #[tool_router]
 impl EchoServer {
-    pub fn new() -> Self {
+    pub fn new(session: Arc<safety::Session>) -> Self {
         Self {
             tool_router: Self::tool_router(),
+            session,
         }
     }
 
@@ -322,6 +325,90 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SafeRead. Issues a confirmation token; no mutation.
+    #[tool(
+        description = "Prepare a preference write for user confirmation. \
+                       Validates `key` against the write allowlist (ADR-0004 §4) and returns \
+                       a short-lived confirmation token and a human-readable diff summary. \
+                       Present the summary to the user, then pass the token to `write_preference`. \
+                       Hard-deny keys (kill-switch flags) are unconditionally refused."
+    )]
+    async fn prepare_write_preference(
+        &self,
+        Parameters(args): Parameters<tools::PrepareWritePreferenceArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::write_preference::prepare_write(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: LiveWrite. Requires root + valid token; mutates globalDefaults.
+    #[tool(
+        description = "Write an allowlisted preference key in Little Snitch's globalDefaults. \
+                       Requires a confirmation token from `prepare_write_preference` \
+                       (the user must have approved the proposed change). \
+                       Wraps `littlesnitch write-preference <key> <value>`. \
+                       Requires the MCP server to be running as root."
+    )]
+    async fn write_preference(
+        &self,
+        Parameters(args): Parameters<tools::WritePreferenceArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::write_preference::write(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: SafeRead. Issues a confirmation token; no mutation.
+    #[tool(
+        description = "Prepare a preference removal for user confirmation. \
+                       Validates `key` against the write allowlist (ADR-0004 §4) and returns \
+                       a short-lived confirmation token and a diff summary. \
+                       Present the summary to the user, then pass the token to `remove_preference`. \
+                       Hard-deny keys are unconditionally refused."
+    )]
+    async fn prepare_remove_preference(
+        &self,
+        Parameters(args): Parameters<tools::PrepareRemovePreferenceArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::write_preference::prepare_remove(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: LiveWrite. Requires root + valid token; removes from globalDefaults.
+    #[tool(
+        description = "Remove an allowlisted preference key from Little Snitch's globalDefaults, \
+                       restoring the built-in default. \
+                       Requires a confirmation token from `prepare_remove_preference`. \
+                       Wraps `littlesnitch write-preference -r <key>`. \
+                       Requires the MCP server to be running as root."
+    )]
+    async fn remove_preference(
+        &self,
+        Parameters(args): Parameters<tools::RemovePreferenceArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::write_preference::remove(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
@@ -489,7 +576,10 @@ async fn main() -> Result<()> {
     let managed = managed_dir::ManagedDir::bootstrap()?;
     tracing::info!(root = %managed.root.display(), "managed directory ready");
 
-    let service = EchoServer::new().serve(stdio()).await?;
+    let session = Arc::new(
+        safety::Session::new().map_err(|e| anyhow::anyhow!("OS RNG failure: {e}"))?,
+    );
+    let service = EchoServer::new(session).serve(stdio()).await?;
     service.waiting().await?;
     Ok(())
 }
