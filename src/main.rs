@@ -363,7 +363,27 @@ impl ServerHandler for EchoServer {
             },
             annotations: None,
         };
-        Ok(ListResourcesResult::with_all_items(vec![resource]))
+        let schema_resource = Annotated {
+            raw: RawResource {
+                uri: resources::schema::URI.to_string(),
+                name: "lsrules-schema".to_string(),
+                title: Some(".lsrules JSON Schema".to_string()),
+                description: Some(
+                    "JSON Schema (draft-07) for Little Snitch .lsrules rule-group files. \
+                     Consult this before authoring or validating .lsrules content."
+                        .to_string(),
+                ),
+                mime_type: Some("application/schema+json".to_string()),
+                size: Some(resources::schema::SCHEMA_STR.len() as u32),
+                icons: None,
+                meta: None,
+            },
+            annotations: None,
+        };
+        Ok(ListResourcesResult::with_all_items(vec![
+            resource,
+            schema_resource,
+        ]))
     }
 
     async fn list_resource_templates(
@@ -395,6 +415,14 @@ impl ServerHandler for EchoServer {
     ) -> Result<ReadResourceResult, McpError> {
         let managed = managed_dir::ManagedDir::bootstrap()
             .map_err(|e| McpError::internal_error(format!("managed directory error: {e}"), None))?;
+
+        // Schema resource — served directly from the embedded string; no ManagedDir needed.
+        if request.uri == resources::schema::URI {
+            return Ok(ReadResourceResult::new(vec![ResourceContents::text(
+                resources::schema::SCHEMA_STR,
+                resources::schema::URI,
+            )]));
+        }
 
         // Listing resource
         if request.uri == resources::lsrules_files::URI {
