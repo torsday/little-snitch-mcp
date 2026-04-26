@@ -112,6 +112,30 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "capture_process_traffic",
         classification: Classification::SudoRead,
     },
+    ToolMeta {
+        name: "prepare_activate_profile",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "activate_profile",
+        classification: Classification::LiveWrite,
+    },
+    ToolMeta {
+        name: "prepare_deactivate_all_profiles",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "deactivate_all_profiles",
+        classification: Classification::LiveWrite,
+    },
+    ToolMeta {
+        name: "prepare_update_factory_rule_groups",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "update_factory_rule_groups",
+        classification: Classification::LiveWrite,
+    },
 ];
 
 /// Look up a tool's metadata by name.

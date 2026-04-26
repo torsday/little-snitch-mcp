@@ -6,6 +6,8 @@ pub mod doctor;
 pub mod export_model_backup;
 pub mod list_preferences;
 pub mod lsrules_metadata;
+pub mod manage_profiles;
+pub mod update_factory_rule_groups;
 pub mod read_preference;
 pub mod remove_rule_from_lsrules_file;
 pub mod show_restrictions;
@@ -30,6 +32,13 @@ pub use tail_log::TailLogArgs;
 pub use tail_traffic::TailTrafficArgs;
 pub use update_rule_in_lsrules_file::UpdateRuleArgs;
 pub use validate_lsrules::ValidateLsrulesArgs;
+pub use manage_profiles::{
+    ActivateProfileArgs, DeactivateAllProfilesArgs, PrepareActivateProfileArgs,
+    PrepareDeactivateAllProfilesArgs,
+};
+pub use update_factory_rule_groups::{
+    PrepareUpdateFactoryRuleGroupsArgs, UpdateFactoryRuleGroupsArgs,
+};
 pub use warm_sudo::WarmSudoArgs;
 pub use write_preference::{
     PrepareRemovePreferenceArgs, PrepareWritePreferenceArgs, RemovePreferenceArgs,
