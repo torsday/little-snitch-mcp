@@ -108,6 +108,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "diff_lsrules_files",
         classification: Classification::SafeRead,
     },
+    ToolMeta {
+        name: "capture_process_traffic",
+        classification: Classification::SudoRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.

@@ -12,6 +12,9 @@ pub const RULES_SUBDIR: &str = "rules";
 /// Subdirectory for live-model export backups.
 pub const BACKUPS_SUBDIR: &str = "backups";
 
+/// Subdirectory for capture-traffic output files.
+pub const CAPTURES_SUBDIR: &str = "captures";
+
 #[derive(Debug, Error)]
 pub enum ManagedDirError {
     #[error("cannot determine home directory")]
@@ -39,6 +42,8 @@ pub struct ManagedDir {
     pub rules: PathBuf,
     /// `<root>/backups/` — live-model export backups.
     pub backups: PathBuf,
+    /// `<root>/captures/` — capture-traffic output files.
+    pub captures: PathBuf,
 }
 
 impl ManagedDir {
@@ -51,8 +56,9 @@ impl ManagedDir {
         let root = resolve_root()?;
         let rules = root.join(RULES_SUBDIR);
         let backups = root.join(BACKUPS_SUBDIR);
+        let captures = root.join(CAPTURES_SUBDIR);
 
-        for dir in [&root, &rules, &backups] {
+        for dir in [&root, &rules, &backups, &captures] {
             ensure_dir_700(dir)?;
         }
 
@@ -60,6 +66,7 @@ impl ManagedDir {
             root,
             rules,
             backups,
+            captures,
         })
     }
 

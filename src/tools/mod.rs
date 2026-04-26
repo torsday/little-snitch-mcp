@@ -1,5 +1,6 @@
 pub mod add_rule_to_lsrules_file;
 pub mod backup_harness;
+pub mod capture_process_traffic;
 pub mod create_lsrules_file;
 pub mod doctor;
 pub mod export_model_backup;
@@ -16,6 +17,7 @@ pub mod warm_sudo;
 pub mod write_preference;
 
 pub use add_rule_to_lsrules_file::AddRuleArgs;
+pub use capture_process_traffic::CaptureTrafficArgs;
 pub use create_lsrules_file::CreateLsrulesArgs;
 pub use doctor::DoctorArgs;
 pub use export_model_backup::ExportModelBackupArgs;
