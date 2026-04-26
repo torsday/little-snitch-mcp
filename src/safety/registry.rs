@@ -156,6 +156,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "get_rules_for_process",
         classification: Classification::SafeRead,
     },
+    ToolMeta {
+        name: "find_rules_for_remote",
+        classification: Classification::SafeRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.
