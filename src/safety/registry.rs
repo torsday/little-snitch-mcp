@@ -96,6 +96,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "remove_preference",
         classification: Classification::LiveWrite,
     },
+    ToolMeta {
+        name: "tail_traffic",
+        classification: Classification::SudoRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.

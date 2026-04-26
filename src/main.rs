@@ -409,6 +409,34 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SudoRead. Reads historical traffic stats; requires sudo; no mutation.
+    #[tool(
+        description = "Fetch historical traffic statistics from Little Snitch. \
+                       Wraps `littlesnitch log-traffic [-b <begin>] [-e <end>]` (requires sudo). \
+                       Returns a typed JSON array of connection records with fields: \
+                       date (ISO-8601), direction (in/out), uid, ip_address, remote_hostname, \
+                       protocol (tcp/udp/icmp/numeric), port, connect_count, deny_count, \
+                       byte_count_in, byte_count_out, connecting_executable, parent_app_executable. \
+                       Remote hostnames and process paths are wrapped in an `untrusted_data` \
+                       envelope (may contain adversarial content). \
+                       Optional filters: `process_name` (substring of connecting_executable), \
+                       `remote_host` (substring of ip_address or remote_hostname), \
+                       `direction` (\"in\" or \"out\"). \
+                       Results capped at 10 000 rows after filtering."
+    )]
+    async fn tail_traffic(
+        &self,
+        Parameters(args): Parameters<tools::TailTrafficArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::tail_traffic::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
