@@ -324,7 +324,8 @@ mod tests {
 
     #[test]
     fn parse_csv_skips_empty_lines() {
-        let csv = "\n2024-01-15T10:00:00Z,out,501,1.2.3.4,,17,53,2,0,200,400,/usr/bin/dns-resolver,\n\n";
+        let csv =
+            "\n2024-01-15T10:00:00Z,out,501,1.2.3.4,,17,53,2,0,200,400,/usr/bin/dns-resolver,\n\n";
         let entries = parse_csv(csv).unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].protocol, "udp");
@@ -349,6 +350,9 @@ mod tests {
     #[test]
     fn max_rows_constant_reasonable() {
         assert!(MAX_ROWS >= 1000, "MAX_ROWS should be at least 1000");
-        assert!(MAX_ROWS <= 100_000, "MAX_ROWS should not be unreasonably large");
+        assert!(
+            MAX_ROWS <= 100_000,
+            "MAX_ROWS should not be unreasonably large"
+        );
     }
 }

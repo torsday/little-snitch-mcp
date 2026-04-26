@@ -54,7 +54,10 @@ pub fn run(args: CreateLsrulesArgs) -> Result<CreateResult, String> {
 }
 
 /// Inner implementation — accepts an explicit `rules_dir` path for testing.
-pub fn run_with_root(args: CreateLsrulesArgs, managed_root: &std::path::Path) -> Result<CreateResult, String> {
+pub fn run_with_root(
+    args: CreateLsrulesArgs,
+    managed_root: &std::path::Path,
+) -> Result<CreateResult, String> {
     let rules_dir = managed_root.join("rules");
     std::fs::create_dir_all(&rules_dir)
         .map_err(|e| format!("cannot create rules dir {rules_dir:?}: {e}"))?;

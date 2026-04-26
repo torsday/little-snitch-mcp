@@ -142,19 +142,19 @@ pub fn run_with_model(args: GetRulesForProcessArgs, model: &Model) -> GetRulesFo
                         .as_deref()
                         .map(|s| s.to_string())
                         .or_else(|| {
-                            r.remote_domains.as_ref().map(|v| {
-                                v.iter().collect::<Vec<_>>().join(", ")
-                            })
+                            r.remote_domains
+                                .as_ref()
+                                .map(|v| v.iter().collect::<Vec<_>>().join(", "))
                         })
                         .or_else(|| {
-                            r.remote_hosts.as_ref().map(|v| {
-                                v.iter().collect::<Vec<_>>().join(", ")
-                            })
+                            r.remote_hosts
+                                .as_ref()
+                                .map(|v| v.iter().collect::<Vec<_>>().join(", "))
                         })
                         .or_else(|| {
-                            r.remote_addresses.as_ref().map(|v| {
-                                v.iter().collect::<Vec<_>>().join(", ")
-                            })
+                            r.remote_addresses
+                                .as_ref()
+                                .map(|v| v.iter().collect::<Vec<_>>().join(", "))
                         });
                     RuleEntry {
                         index,
@@ -247,7 +247,9 @@ mod tests {
     fn matches_by_exact_process_path() {
         let model = fixture_model();
         let result = run_with_model(
-            GetRulesForProcessArgs { process: "/usr/bin/curl".into() },
+            GetRulesForProcessArgs {
+                process: "/usr/bin/curl".into(),
+            },
             &model,
         );
         assert_eq!(result.total_count, 3);
@@ -258,7 +260,9 @@ mod tests {
     fn non_matching_process_returns_empty() {
         let model = fixture_model();
         let result = run_with_model(
-            GetRulesForProcessArgs { process: "/usr/bin/wget".into() },
+            GetRulesForProcessArgs {
+                process: "/usr/bin/wget".into(),
+            },
             &model,
         );
         assert_eq!(result.total_count, 0);
@@ -269,11 +273,17 @@ mod tests {
     fn groups_sorted_by_display_name() {
         let model = fixture_model();
         let result = run_with_model(
-            GetRulesForProcessArgs { process: "/usr/bin/curl".into() },
+            GetRulesForProcessArgs {
+                process: "/usr/bin/curl".into(),
+            },
             &model,
         );
         // Groups should be: "<no-group>", "Active Group", "Disabled Group" sorted
-        let names: Vec<&str> = result.groups.iter().map(|g| g.display_name.as_str()).collect();
+        let names: Vec<&str> = result
+            .groups
+            .iter()
+            .map(|g| g.display_name.as_str())
+            .collect();
         let mut sorted = names.clone();
         sorted.sort();
         assert_eq!(names, sorted, "groups must be sorted by display name");
@@ -283,7 +293,9 @@ mod tests {
     fn disabled_group_flagged() {
         let model = fixture_model();
         let result = run_with_model(
-            GetRulesForProcessArgs { process: "/usr/bin/curl".into() },
+            GetRulesForProcessArgs {
+                process: "/usr/bin/curl".into(),
+            },
             &model,
         );
         let disabled = result
@@ -302,7 +314,9 @@ mod tests {
     fn active_group_flagged_correctly() {
         let model = fixture_model();
         let result = run_with_model(
-            GetRulesForProcessArgs { process: "/usr/bin/curl".into() },
+            GetRulesForProcessArgs {
+                process: "/usr/bin/curl".into(),
+            },
             &model,
         );
         let active = result
@@ -318,7 +332,9 @@ mod tests {
     fn no_group_bucket_present() {
         let model = fixture_model();
         let result = run_with_model(
-            GetRulesForProcessArgs { process: "/usr/bin/curl".into() },
+            GetRulesForProcessArgs {
+                process: "/usr/bin/curl".into(),
+            },
             &model,
         );
         assert!(
@@ -329,7 +345,9 @@ mod tests {
 
     #[test]
     fn empty_process_returns_error() {
-        let result = run(GetRulesForProcessArgs { process: String::new() });
+        let result = run(GetRulesForProcessArgs {
+            process: String::new(),
+        });
         assert!(result.is_err());
     }
 
@@ -337,7 +355,9 @@ mod tests {
     fn ssh_rules_dont_appear_in_curl_query() {
         let model = fixture_model();
         let result = run_with_model(
-            GetRulesForProcessArgs { process: "/usr/bin/curl".into() },
+            GetRulesForProcessArgs {
+                process: "/usr/bin/curl".into(),
+            },
             &model,
         );
         for g in &result.groups {

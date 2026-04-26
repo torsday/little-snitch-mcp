@@ -18,12 +18,11 @@ use little_snitch_mcp::{
             prepare_deactivate,
         },
         manage_rule_groups::{
-            DisableRuleGroupArgs, EnableRuleGroupArgs, disable, enable,
-            prepare_disable_with_model, prepare_enable_with_model,
+            DisableRuleGroupArgs, EnableRuleGroupArgs, disable, enable, prepare_disable_with_model,
+            prepare_enable_with_model,
         },
         update_factory_rule_groups::{
-            PrepareUpdateFactoryRuleGroupsArgs, UpdateFactoryRuleGroupsArgs, prepare_update,
-            update,
+            PrepareUpdateFactoryRuleGroupsArgs, UpdateFactoryRuleGroupsArgs, prepare_update, update,
         },
         write_preference::{
             PrepareRemovePreferenceArgs, PrepareWritePreferenceArgs, RemovePreferenceArgs,
@@ -175,8 +174,7 @@ fn disable_token_rejected_by_enable_verify() {
     let s = new_session();
     let model = fixture_model();
 
-    let disable_prep =
-        prepare_disable_with_model(&s, "Work Rules", None, &model).unwrap();
+    let disable_prep = prepare_disable_with_model(&s, "Work Rules", None, &model).unwrap();
 
     let err = enable(
         &s,
@@ -268,11 +266,7 @@ fn activate_token_not_accepted_by_deactivate() {
     )
     .unwrap();
 
-    let err = deactivate_all(
-        &s,
-        DeactivateAllProfilesArgs { token: prep.token },
-    )
-    .unwrap_err();
+    let err = deactivate_all(&s, DeactivateAllProfilesArgs { token: prep.token }).unwrap_err();
     assert!(!err.is_empty());
 }
 
@@ -281,8 +275,7 @@ fn activate_token_not_accepted_by_deactivate() {
 #[test]
 fn factory_update_prepare_all_returns_token() {
     let s = new_session();
-    let result =
-        prepare_update(&s, PrepareUpdateFactoryRuleGroupsArgs { scope: None }).unwrap();
+    let result = prepare_update(&s, PrepareUpdateFactoryRuleGroupsArgs { scope: None }).unwrap();
     assert_eq!(result.scope, "all");
     assert!(!result.token.is_empty());
 }

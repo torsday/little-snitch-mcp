@@ -251,7 +251,11 @@ pub fn prepare_disable_with_model(
         diff_summary: format!(
             "disable rule group \"{}\"{}",
             resolved_name,
-            if builtin { " [builtin — acknowledged]" } else { "" }
+            if builtin {
+                " [builtin — acknowledged]"
+            } else {
+                ""
+            }
         ),
         resolved_name,
         is_builtin: builtin,
@@ -503,21 +507,25 @@ mod tests {
     #[test]
     fn empty_resolved_name_rejected() {
         let s = session();
-        assert!(enable(
-            &s,
-            EnableRuleGroupArgs {
-                resolved_name: String::new(),
-                token: "x".into()
-            }
-        )
-        .is_err());
-        assert!(disable(
-            &s,
-            DisableRuleGroupArgs {
-                resolved_name: String::new(),
-                token: "x".into()
-            }
-        )
-        .is_err());
+        assert!(
+            enable(
+                &s,
+                EnableRuleGroupArgs {
+                    resolved_name: String::new(),
+                    token: "x".into()
+                }
+            )
+            .is_err()
+        );
+        assert!(
+            disable(
+                &s,
+                DisableRuleGroupArgs {
+                    resolved_name: String::new(),
+                    token: "x".into()
+                }
+            )
+            .is_err()
+        );
     }
 }

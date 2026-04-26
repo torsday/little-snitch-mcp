@@ -202,7 +202,9 @@ fn rule_matches(
             if let Some(domains) = &rule.remote_domains {
                 for stored in domains.iter() {
                     let stored_lc = stored.to_ascii_lowercase();
-                    if domain_covers(&stored_lc, name) || query_covers_stored_domain(&stored_lc, name) {
+                    if domain_covers(&stored_lc, name)
+                        || query_covers_stored_domain(&stored_lc, name)
+                    {
                         return Some((MatchKind::Domain, stored.to_string()));
                     }
                 }
@@ -295,20 +297,27 @@ pub fn run_with_model(args: FindRulesForRemoteArgs, model: &Model) -> FindRulesF
 
             let rules: Vec<MatchedRule> = items
                 .into_iter()
-                .map(|(global_index, r, match_kind, matched_remote)| MatchedRule {
-                    global_index,
-                    action: format!("{:?}", r.action).to_lowercase(),
-                    direction: r.direction.map(|d| format!("{:?}", d).to_lowercase()),
-                    matched_remote,
-                    match_kind,
-                    process: r.process.clone(),
-                    creation_date: r.creation_date.clone(),
-                    modification_date: r.modification_date.clone(),
-                    group_active: is_active,
-                })
+                .map(
+                    |(global_index, r, match_kind, matched_remote)| MatchedRule {
+                        global_index,
+                        action: format!("{:?}", r.action).to_lowercase(),
+                        direction: r.direction.map(|d| format!("{:?}", d).to_lowercase()),
+                        matched_remote,
+                        match_kind,
+                        process: r.process.clone(),
+                        creation_date: r.creation_date.clone(),
+                        modification_date: r.modification_date.clone(),
+                        group_active: is_active,
+                    },
+                )
                 .collect();
 
-            GroupBucket { group_id, display_name, is_active, rules }
+            GroupBucket {
+                group_id,
+                display_name,
+                is_active,
+                rules,
+            }
         })
         .collect();
 
@@ -412,7 +421,10 @@ mod tests {
 
     fn run(remote: &str, catch_all: bool) -> FindRulesForRemoteResult {
         run_with_model(
-            FindRulesForRemoteArgs { remote: remote.into(), include_catch_all: catch_all },
+            FindRulesForRemoteArgs {
+                remote: remote.into(),
+                include_catch_all: catch_all,
+            },
             &fixture_model(),
         )
     }
@@ -476,14 +488,22 @@ mod tests {
         let r = run("api.example.com", false);
         // Should match remote-hosts (exact) AND remote-domains (api.example.com is subdomain of example.com)
         assert!(r.total_count >= 1);
-        let has_host = r.groups.iter().flat_map(|g| &g.rules).any(|r| r.match_kind == MatchKind::Host);
+        let has_host = r
+            .groups
+            .iter()
+            .flat_map(|g| &g.rules)
+            .any(|r| r.match_kind == MatchKind::Host);
         assert!(has_host, "should have at least one Host match");
     }
 
     #[test]
     fn hostname_not_in_hosts_list_doesnt_match_host_kind() {
         let r = run("other.example.com", false);
-        let has_host = r.groups.iter().flat_map(|g| &g.rules).any(|r| r.match_kind == MatchKind::Host);
+        let has_host = r
+            .groups
+            .iter()
+            .flat_map(|g| &g.rules)
+            .any(|r| r.match_kind == MatchKind::Host);
         assert!(!has_host, "other.example.com is not in remote-hosts");
     }
 
@@ -493,21 +513,33 @@ mod tests {
     fn stored_domain_covers_subdomain_query() {
         // stored: example.com → should match api.example.com
         let r = run("api.example.com", false);
-        let has_domain = r.groups.iter().flat_map(|g| &g.rules).any(|r| r.match_kind == MatchKind::Domain);
+        let has_domain = r
+            .groups
+            .iter()
+            .flat_map(|g| &g.rules)
+            .any(|r| r.match_kind == MatchKind::Domain);
         assert!(has_domain, "stored domain should cover subdomain");
     }
 
     #[test]
     fn exact_domain_matches() {
         let r = run("example.com", false);
-        let has_domain = r.groups.iter().flat_map(|g| &g.rules).any(|r| r.match_kind == MatchKind::Domain);
+        let has_domain = r
+            .groups
+            .iter()
+            .flat_map(|g| &g.rules)
+            .any(|r| r.match_kind == MatchKind::Domain);
         assert!(has_domain, "exact domain match should work");
     }
 
     #[test]
     fn unrelated_domain_does_not_match() {
         let r = run("notexample.com", false);
-        let has_domain = r.groups.iter().flat_map(|g| &g.rules).any(|r| r.match_kind == MatchKind::Domain);
+        let has_domain = r
+            .groups
+            .iter()
+            .flat_map(|g| &g.rules)
+            .any(|r| r.match_kind == MatchKind::Domain);
         assert!(!has_domain);
     }
 
@@ -516,15 +548,26 @@ mod tests {
     #[test]
     fn catch_all_excluded_by_default() {
         let r = run("1.2.3.4", false);
-        let has_catch_all = r.groups.iter().flat_map(|g| &g.rules).any(|r| r.match_kind == MatchKind::CatchAll);
+        let has_catch_all = r
+            .groups
+            .iter()
+            .flat_map(|g| &g.rules)
+            .any(|r| r.match_kind == MatchKind::CatchAll);
         assert!(!has_catch_all, "catch-all must be opt-in");
     }
 
     #[test]
     fn catch_all_included_when_requested() {
         let r = run("1.2.3.4", true);
-        let has_catch_all = r.groups.iter().flat_map(|g| &g.rules).any(|r| r.match_kind == MatchKind::CatchAll);
-        assert!(has_catch_all, "catch-all rule must appear when include_catch_all=true");
+        let has_catch_all = r
+            .groups
+            .iter()
+            .flat_map(|g| &g.rules)
+            .any(|r| r.match_kind == MatchKind::CatchAll);
+        assert!(
+            has_catch_all,
+            "catch-all rule must appear when include_catch_all=true"
+        );
     }
 
     // ── group bucketing / sorting ─────────────────────────────────────────────
@@ -561,7 +604,10 @@ mod tests {
     #[test]
     fn empty_remote_propagates_from_live_run() {
         let result = run_with_model(
-            FindRulesForRemoteArgs { remote: String::new(), include_catch_all: false },
+            FindRulesForRemoteArgs {
+                remote: String::new(),
+                include_catch_all: false,
+            },
             &fixture_model(),
         );
         // empty remote won't match anything — just verify it doesn't panic
@@ -591,6 +637,9 @@ mod tests {
         assert!(address_covers_ip("1.2.3.4", "1.2.3.4".parse().unwrap()));
         assert!(!address_covers_ip("1.2.3.4", "1.2.3.5".parse().unwrap()));
         assert!(address_covers_ip("10.0.0.0/8", "10.0.0.1".parse().unwrap()));
-        assert!(!address_covers_ip("10.0.0.0/8", "11.0.0.1".parse().unwrap()));
+        assert!(!address_covers_ip(
+            "10.0.0.0/8",
+            "11.0.0.1".parse().unwrap()
+        ));
     }
 }
