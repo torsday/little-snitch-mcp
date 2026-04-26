@@ -7,12 +7,13 @@ pub mod export_model_backup;
 pub mod list_preferences;
 pub mod lsrules_metadata;
 pub mod manage_profiles;
-pub mod update_factory_rule_groups;
+pub mod prepare_live_model_change;
 pub mod read_preference;
 pub mod remove_rule_from_lsrules_file;
 pub mod show_restrictions;
 pub mod tail_log;
 pub mod tail_traffic;
+pub mod update_factory_rule_groups;
 pub mod update_rule_in_lsrules_file;
 pub mod validate_lsrules;
 pub mod warm_sudo;
@@ -25,20 +26,21 @@ pub use doctor::DoctorArgs;
 pub use export_model_backup::ExportModelBackupArgs;
 pub use list_preferences::ListPreferencesArgs;
 pub use lsrules_metadata::{DiffLsrulesArgs, SetMetadataArgs};
+pub use manage_profiles::{
+    ActivateProfileArgs, DeactivateAllProfilesArgs, PrepareActivateProfileArgs,
+    PrepareDeactivateAllProfilesArgs,
+};
+pub use prepare_live_model_change::PrepareLiveModelChangeArgs;
 pub use read_preference::ReadPreferenceArgs;
 pub use remove_rule_from_lsrules_file::RemoveRuleArgs;
 pub use show_restrictions::ShowRestrictionsArgs;
 pub use tail_log::TailLogArgs;
 pub use tail_traffic::TailTrafficArgs;
-pub use update_rule_in_lsrules_file::UpdateRuleArgs;
-pub use validate_lsrules::ValidateLsrulesArgs;
-pub use manage_profiles::{
-    ActivateProfileArgs, DeactivateAllProfilesArgs, PrepareActivateProfileArgs,
-    PrepareDeactivateAllProfilesArgs,
-};
 pub use update_factory_rule_groups::{
     PrepareUpdateFactoryRuleGroupsArgs, UpdateFactoryRuleGroupsArgs,
 };
+pub use update_rule_in_lsrules_file::UpdateRuleArgs;
+pub use validate_lsrules::ValidateLsrulesArgs;
 pub use warm_sudo::WarmSudoArgs;
 pub use write_preference::{
     PrepareRemovePreferenceArgs, PrepareWritePreferenceArgs, RemovePreferenceArgs,
