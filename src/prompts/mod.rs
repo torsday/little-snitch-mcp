@@ -9,6 +9,7 @@
 //! See [ADR-0003](../../docs/adr/0003-mcp-tool-surface.md) for the
 //! prompt-vs-tool separation rationale.
 
+pub mod audit_rules_for_process;
 pub mod block_telemetry_for_app;
 pub mod prepare_incident_block;
 pub mod triage_unknown_connections;
