@@ -731,6 +731,29 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SafeRead. Returns rules matching a given IP, CIDR, hostname, or domain.
+    #[tool(
+        description = "Return all Little Snitch rules whose remote matcher covers the given IP \
+                       address, CIDR, hostname, or domain. Accepts: bare IP (`1.2.3.4`), CIDR \
+                       (`10.0.0.0/8`), hostname (`api.example.com`, exact match against \
+                       `remote-hosts`), or domain (`example.com`, suffix match against \
+                       `remote-domains`). Results are grouped by rule group; rules in disabled \
+                       groups are flagged. Pass `include_catch_all: true` to also return rules \
+                       whose `remote` is a special value (`\"any\"`, `\"local-net\"`, etc.)."
+    )]
+    async fn find_rules_for_remote(
+        &self,
+        Parameters(args): Parameters<tools::FindRulesForRemoteArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::find_rules_for_remote::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
