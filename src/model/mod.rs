@@ -26,6 +26,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+pub mod matcher;
 pub mod patch;
 pub mod rule;
 pub mod rule_construct;

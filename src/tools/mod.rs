@@ -6,6 +6,7 @@ pub mod blocklist_overlays;
 pub mod capture_process_traffic;
 pub mod create_lsrules_file;
 pub mod doctor;
+pub mod explain_rule_match;
 pub mod export_model_backup;
 pub mod find_rules_for_remote;
 pub mod get_rules_for_process;
