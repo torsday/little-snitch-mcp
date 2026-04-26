@@ -1,20 +1,26 @@
 use anyhow::Result;
 use clap::Parser;
 use rmcp::{
-    ErrorData as McpError, ServerHandler, ServiceExt,
-    handler::server::{router::tool::ToolRouter, wrapper::Parameters},
-    model::{
-        Annotated, CallToolResult, Content, Implementation, ListResourceTemplatesResult,
-        ListResourcesResult, PaginatedRequestParams, ProtocolVersion, RawResource,
-        RawResourceTemplate, ReadResourceRequestParams, ReadResourceResult, ResourceContents,
-        ServerCapabilities, ServerInfo,
+    ErrorData as McpError, RoleServer, ServerHandler, ServiceExt,
+    handler::server::{
+        router::{prompt::PromptRouter, tool::ToolRouter},
+        wrapper::Parameters,
     },
-    schemars, tool, tool_handler, tool_router,
+    model::{
+        Annotated, CallToolResult, Content, GetPromptRequestParams, GetPromptResult,
+        Implementation, ListPromptsResult, ListResourceTemplatesResult, ListResourcesResult,
+        PaginatedRequestParams, PromptMessage, ProtocolVersion, RawResource, RawResourceTemplate,
+        ReadResourceRequestParams, ReadResourceResult, ResourceContents, ServerCapabilities,
+        ServerInfo,
+    },
+    prompt, prompt_handler, prompt_router, schemars,
+    service::RequestContext,
+    tool, tool_handler, tool_router,
     transport::stdio,
 };
 use tracing_subscriber::EnvFilter;
 
-use little_snitch_mcp::{cli, managed_dir, resources, safety, tools};
+use little_snitch_mcp::{cli, managed_dir, prompts, resources, safety, tools};
 use std::sync::Arc;
 
 #[derive(Parser)]
@@ -29,12 +35,32 @@ pub struct EchoArgs {
 pub struct EchoServer {
     #[allow(dead_code)] // read by the #[tool_handler] macro expansion
     tool_router: ToolRouter<EchoServer>,
+    #[allow(dead_code)] // read by the #[prompt_handler] macro expansion
+    prompt_router: PromptRouter<EchoServer>,
     session: Arc<safety::Session>,
 }
 
 impl Default for EchoServer {
     fn default() -> Self {
-        Self::new(Arc::new(safety::Session::new().expect("OS RNG unavailable")))
+        Self::new(Arc::new(
+            safety::Session::new().expect("OS RNG unavailable"),
+        ))
+    }
+}
+
+#[prompt_router]
+impl EchoServer {
+    /// Drafts a `.lsrules` blocking the named application's telemetry
+    /// hosts. The LLM, having read this prompt, calls
+    /// `create_lsrules_file` and instructs the operator to review
+    /// before applying via `apply_lsrules_file_to_live_model`. No
+    /// live mutation occurs in this flow. See ADR-0004 §S5.
+    #[prompt(name = "block_telemetry_for_app")]
+    fn block_telemetry_for_app(
+        &self,
+        Parameters(args): Parameters<prompts::block_telemetry_for_app::Args>,
+    ) -> Vec<PromptMessage> {
+        prompts::block_telemetry_for_app::build_messages(&args)
     }
 }
 
@@ -43,6 +69,7 @@ impl EchoServer {
     pub fn new(session: Arc<safety::Session>) -> Self {
         Self {
             tool_router: Self::tool_router(),
+            prompt_router: Self::prompt_router(),
             session,
         }
     }
@@ -303,16 +330,14 @@ impl EchoServer {
     }
 
     // Classification: SudoRead. Reads license info via CLI; requires sudo; no mutation.
-    #[tool(
-        description = "Query Little Snitch license and feature-gate status. \
+    #[tool(description = "Query Little Snitch license and feature-gate status. \
                        Wraps `littlesnitch restrictions` (requires sudo). \
                        Returns `{ licensed, expires_at, features, raw }` where \
                        `licensed` is true when the copy is fully registered, \
                        `expires_at` is an ISO 8601 date string or null for perpetual licenses, \
                        `features` is `\"full\"` for a complete license or `\"limited\"` for \
                        demo/trial mode, and `raw` is the verbatim CLI output for debugging \
-                       unexpected formats."
-    )]
+                       unexpected formats.")]
     async fn show_restrictions(
         &self,
         Parameters(args): Parameters<tools::ShowRestrictionsArgs>,
@@ -327,13 +352,11 @@ impl EchoServer {
     }
 
     // Classification: SafeRead. Issues a confirmation token; no mutation.
-    #[tool(
-        description = "Prepare a preference write for user confirmation. \
+    #[tool(description = "Prepare a preference write for user confirmation. \
                        Validates `key` against the write allowlist (ADR-0004 §4) and returns \
                        a short-lived confirmation token and a human-readable diff summary. \
                        Present the summary to the user, then pass the token to `write_preference`. \
-                       Hard-deny keys (kill-switch flags) are unconditionally refused."
-    )]
+                       Hard-deny keys (kill-switch flags) are unconditionally refused.")]
     async fn prepare_write_preference(
         &self,
         Parameters(args): Parameters<tools::PrepareWritePreferenceArgs>,
@@ -369,13 +392,11 @@ impl EchoServer {
     }
 
     // Classification: SafeRead. Issues a confirmation token; no mutation.
-    #[tool(
-        description = "Prepare a preference removal for user confirmation. \
+    #[tool(description = "Prepare a preference removal for user confirmation. \
                        Validates `key` against the write allowlist (ADR-0004 §4) and returns \
                        a short-lived confirmation token and a diff summary. \
                        Present the summary to the user, then pass the token to `remove_preference`. \
-                       Hard-deny keys are unconditionally refused."
-    )]
+                       Hard-deny keys are unconditionally refused.")]
     async fn prepare_remove_preference(
         &self,
         Parameters(args): Parameters<tools::PrepareRemovePreferenceArgs>,
@@ -440,6 +461,7 @@ impl EchoServer {
 }
 
 #[tool_handler]
+#[prompt_handler(router = self.prompt_router)]
 impl ServerHandler for EchoServer {
     fn get_info(&self) -> ServerInfo {
         let mut info = ServerInfo::default();
@@ -447,6 +469,7 @@ impl ServerHandler for EchoServer {
         info.capabilities = ServerCapabilities::builder()
             .enable_tools()
             .enable_resources()
+            .enable_prompts()
             .build();
         let mut impl_info = Implementation::from_build_env();
         impl_info.name = env!("CARGO_PKG_NAME").into();
@@ -604,9 +627,8 @@ async fn main() -> Result<()> {
     let managed = managed_dir::ManagedDir::bootstrap()?;
     tracing::info!(root = %managed.root.display(), "managed directory ready");
 
-    let session = Arc::new(
-        safety::Session::new().map_err(|e| anyhow::anyhow!("OS RNG failure: {e}"))?,
-    );
+    let session =
+        Arc::new(safety::Session::new().map_err(|e| anyhow::anyhow!("OS RNG failure: {e}"))?);
     let service = EchoServer::new(session).serve(stdio()).await?;
     service.waiting().await?;
     Ok(())
