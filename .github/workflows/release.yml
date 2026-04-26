@@ -44,9 +44,60 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Strip and package
+      - name: Strip binary
+        run: strip target/${{ matrix.target }}/release/little-snitch-mcp
+
+      - name: Import signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
-          strip target/${{ matrix.target }}/release/little-snitch-mcp
+          # Decode the base64-encoded P12 certificate and import into a temporary keychain.
+          echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import /tmp/certificate.p12 -k build.keychain \
+            -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          rm /tmp/certificate.p12
+
+      - name: Sign binary
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          codesign \
+            --options runtime \
+            --timestamp \
+            --sign "Developer ID Application: $APPLE_TEAM_ID" \
+            target/${{ matrix.target }}/release/little-snitch-mcp
+
+      - name: Notarize binary
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          # Notarytool requires a zip or dmg; wrap the binary.
+          ditto -c -k --keepParent \
+            target/${{ matrix.target }}/release/little-snitch-mcp \
+            /tmp/notarize-${{ matrix.target }}.zip
+
+          xcrun notarytool submit /tmp/notarize-${{ matrix.target }}.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+
+          rm /tmp/notarize-${{ matrix.target }}.zip
+
+      - name: Staple notarization ticket
+        run: |
+          xcrun stapler staple \
+            target/${{ matrix.target }}/release/little-snitch-mcp
+
+      - name: Package
+        run: |
           tar czf little-snitch-mcp-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
             -C target/${{ matrix.target }}/release little-snitch-mcp
 
