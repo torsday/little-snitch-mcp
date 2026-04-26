@@ -32,6 +32,7 @@ use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 use thiserror::Error;
+use tracing::{debug, info, warn};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -216,11 +217,16 @@ impl Session {
         let payload_json =
             serde_json::to_vec(&payload).expect("TokenPayload is always serializable as JSON");
         let mac = self.compute_mac(&payload_json);
-        Token(format!(
-            "{}.{}",
-            hex::encode(&payload_json),
-            hex::encode(mac)
-        ))
+        let mac_hex = hex::encode(&mac);
+        // First 16 hex chars serve as an audit-friendly token ID in logs.
+        let token_id = &mac_hex[..16.min(mac_hex.len())];
+        info!(
+            tool = %payload.tool,
+            token_id = %token_id,
+            expires_at = payload.expires_at_unix,
+            "confirmation token issued"
+        );
+        Token(format!("{}.{}", hex::encode(&payload_json), mac_hex))
     }
 
     /// Run all seven verifier checks against `token`. On success the
@@ -238,6 +244,36 @@ impl Session {
     /// by tests to drive the EXPIRED check deterministically.
     #[doc(hidden)]
     pub fn verify_at(
+        &self,
+        token: &Token,
+        ctx: &VerifyContext<'_>,
+        now_unix: u64,
+    ) -> Result<VerifiedToken, TokenError> {
+        let result = self.verify_inner(token, ctx, now_unix);
+        match &result {
+            Ok(vt) => {
+                info!(
+                    tool = %ctx.tool,
+                    "confirmation token verified"
+                );
+                debug!(
+                    tool = %ctx.tool,
+                    token_tool = %vt.payload.tool,
+                    "token verification passed all checks"
+                );
+            }
+            Err(e) => {
+                warn!(
+                    tool = %ctx.tool,
+                    reason = %e,
+                    "confirmation token verification failed"
+                );
+            }
+        }
+        result
+    }
+
+    fn verify_inner(
         &self,
         token: &Token,
         ctx: &VerifyContext<'_>,

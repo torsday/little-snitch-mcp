@@ -9,6 +9,7 @@ use crate::cli::adapter::LsCli;
 use crate::model::Model;
 use crate::safety::{ResolveResult, Session, VerifyContext, resolve_group};
 use crate::tools::backup_harness;
+use tracing::info;
 
 /// Sentinel bundle version for rule-group operations.
 ///
@@ -164,6 +165,7 @@ pub fn enable(
         return Err("resolved_name must not be empty".into());
     }
     crate::safety::require_live_write_allowed()?;
+    info!(rule_group = %args.resolved_name, "LiveWrite: enable_rule_group");
 
     let diff_sha = enable_sha(&args.resolved_name);
     let ctx = VerifyContext {
@@ -300,6 +302,7 @@ pub fn disable(
         return Err("resolved_name must not be empty".into());
     }
     crate::safety::require_live_write_allowed()?;
+    info!(rule_group = %args.resolved_name, "LiveWrite: disable_rule_group");
 
     let diff_sha = disable_sha(&args.resolved_name);
     let ctx = VerifyContext {

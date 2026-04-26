@@ -19,6 +19,8 @@ use std::{
     sync::LazyLock,
 };
 
+use tracing::{debug, warn};
+
 use regex::Regex;
 use thiserror::Error;
 
@@ -111,12 +113,27 @@ impl LsCli {
     /// Invoke `littlesnitch <args>` and return the raw [`Output`] on success,
     /// or a typed [`LsCliError`] on any non-zero exit or spawn failure.
     pub fn run<S: AsRef<OsStr>>(&self, args: &[S]) -> Result<Output, LsCliError> {
+        let cmd_args: Vec<&str> = args
+            .iter()
+            .map(|a| a.as_ref().to_str().unwrap_or("<non-utf8>"))
+            .collect();
+        debug!(cmd = %cmd_args.join(" "), "littlesnitch cli invocation");
+
         let output = Command::new(&self.bin).args(args).output()?;
         if output.status.success() {
+            debug!(cmd = %cmd_args[0], exit_code = 0, "littlesnitch cli succeeded");
             return Ok(output);
         }
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(map_stderr(output.status.code().unwrap_or(-1), &stderr))
+        let exit_code = output.status.code().unwrap_or(-1);
+        let stderr_snippet: String = stderr.chars().take(200).collect();
+        warn!(
+            cmd = %cmd_args[0],
+            exit_code,
+            stderr = %stderr_snippet,
+            "littlesnitch cli failed"
+        );
+        Err(map_stderr(exit_code, &stderr))
     }
 }
 

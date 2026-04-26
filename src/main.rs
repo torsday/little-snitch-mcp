@@ -18,6 +18,7 @@ use rmcp::{
     tool, tool_handler, tool_router,
     transport::stdio,
 };
+use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
 use little_snitch_mcp::{cli, managed_dir, prompts, resources, safety, tools};
@@ -308,6 +309,7 @@ impl EchoServer {
         &self,
         Parameters(args): Parameters<tools::DoctorArgs>,
     ) -> Result<CallToolResult, McpError> {
+        debug!(classification = "SafeRead", "tool: doctor");
         match tools::doctor::run(args) {
             Ok(result) => {
                 let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
@@ -330,6 +332,11 @@ impl EchoServer {
         &self,
         Parameters(args): Parameters<tools::TailLogArgs>,
     ) -> Result<CallToolResult, McpError> {
+        debug!(
+            duration_secs = args.duration_secs,
+            classification = "SafeRead",
+            "tool: tail_log"
+        );
         match tools::tail_log::run(args) {
             Ok(result) => {
                 let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
@@ -416,6 +423,7 @@ impl EchoServer {
         &self,
         Parameters(args): Parameters<tools::WritePreferenceArgs>,
     ) -> Result<CallToolResult, McpError> {
+        info!(key = %args.key, classification = "LiveWrite", "tool: write_preference");
         match tools::write_preference::write(&self.session, args) {
             Ok(result) => {
                 let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
@@ -456,6 +464,7 @@ impl EchoServer {
         &self,
         Parameters(args): Parameters<tools::RemovePreferenceArgs>,
     ) -> Result<CallToolResult, McpError> {
+        info!(key = %args.key, classification = "LiveWrite", "tool: remove_preference");
         match tools::write_preference::remove(&self.session, args) {
             Ok(result) => {
                 let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
@@ -584,6 +593,7 @@ impl EchoServer {
         &self,
         Parameters(args): Parameters<tools::ActivateProfileArgs>,
     ) -> Result<CallToolResult, McpError> {
+        info!(profile = %args.name, classification = "LiveWrite", "tool: activate_profile");
         match tools::manage_profiles::activate(&self.session, args) {
             Ok(result) => {
                 let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
@@ -620,6 +630,10 @@ impl EchoServer {
         &self,
         Parameters(args): Parameters<tools::DeactivateAllProfilesArgs>,
     ) -> Result<CallToolResult, McpError> {
+        info!(
+            classification = "LiveWrite",
+            "tool: deactivate_all_profiles"
+        );
         match tools::manage_profiles::deactivate_all(&self.session, args) {
             Ok(result) => {
                 let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
@@ -659,6 +673,10 @@ impl EchoServer {
         &self,
         Parameters(args): Parameters<tools::UpdateFactoryRuleGroupsArgs>,
     ) -> Result<CallToolResult, McpError> {
+        info!(
+            classification = "LiveWrite",
+            "tool: update_factory_rule_groups"
+        );
         match tools::update_factory_rule_groups::update(&self.session, args) {
             Ok(result) => {
                 let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
