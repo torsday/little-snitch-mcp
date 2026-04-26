@@ -100,6 +100,14 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "tail_traffic",
         classification: Classification::SudoRead,
     },
+    ToolMeta {
+        name: "set_lsrules_metadata",
+        classification: Classification::ManagedWrite,
+    },
+    ToolMeta {
+        name: "diff_lsrules_files",
+        classification: Classification::SafeRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.
