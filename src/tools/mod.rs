@@ -1,3 +1,4 @@
+pub mod add_rule_to_live_model;
 pub mod add_rule_to_lsrules_file;
 pub mod backup_harness;
 pub mod capture_process_traffic;
