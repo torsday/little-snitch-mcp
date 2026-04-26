@@ -298,6 +298,30 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SudoRead. Reads license info via CLI; requires sudo; no mutation.
+    #[tool(
+        description = "Query Little Snitch license and feature-gate status. \
+                       Wraps `littlesnitch restrictions` (requires sudo). \
+                       Returns `{ licensed, expires_at, features, raw }` where \
+                       `licensed` is true when the copy is fully registered, \
+                       `expires_at` is an ISO 8601 date string or null for perpetual licenses, \
+                       `features` is `\"full\"` for a complete license or `\"limited\"` for \
+                       demo/trial mode, and `raw` is the verbatim CLI output for debugging \
+                       unexpected formats."
+    )]
+    async fn show_restrictions(
+        &self,
+        Parameters(args): Parameters<tools::ShowRestrictionsArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::show_restrictions::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
