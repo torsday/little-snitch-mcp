@@ -1,6 +1,7 @@
 pub mod add_rule_to_live_model;
 pub mod add_rule_to_lsrules_file;
 pub mod backup_harness;
+pub mod blocklist_overlays;
 pub mod capture_process_traffic;
 pub mod create_lsrules_file;
 pub mod doctor;
