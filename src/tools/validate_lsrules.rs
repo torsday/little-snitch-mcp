@@ -4,10 +4,7 @@ use rmcp::schemars;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-static SCHEMA_STR: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/schemas/lsrules.schema.json"
-));
+use crate::resources::schema::SCHEMA_STR;
 
 static VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     let schema: serde_json::Value =
