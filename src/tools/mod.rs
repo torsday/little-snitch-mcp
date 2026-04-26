@@ -13,6 +13,7 @@ pub mod prepare_live_model_change;
 pub mod read_preference;
 pub mod remove_rule_from_live_model;
 pub mod remove_rule_from_lsrules_file;
+pub mod restore_model_from_file;
 pub mod show_restrictions;
 pub mod tail_log;
 pub mod tail_traffic;
