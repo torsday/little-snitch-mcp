@@ -10,6 +10,7 @@ pub mod explain_rule_match;
 pub mod export_model_backup;
 pub mod find_rules_for_remote;
 pub mod get_rules_for_process;
+pub mod list_backups;
 pub mod list_preferences;
 pub mod lsrules_metadata;
 pub mod manage_profiles;
@@ -36,6 +37,7 @@ pub use doctor::DoctorArgs;
 pub use export_model_backup::ExportModelBackupArgs;
 pub use find_rules_for_remote::FindRulesForRemoteArgs;
 pub use get_rules_for_process::GetRulesForProcessArgs;
+pub use list_backups::ListBackupsArgs;
 pub use list_preferences::ListPreferencesArgs;
 pub use lsrules_metadata::{DiffLsrulesArgs, SetMetadataArgs};
 pub use manage_profiles::{

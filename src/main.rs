@@ -225,6 +225,26 @@ impl EchoServer {
         }
     }
 
+    // Classification: SafeRead. Reads managed backups dir only; no sudo; no mutation.
+    #[tool(
+        description = "List all model backups in the managed backups directory. \
+                       Returns entries sorted newest-first, each with filename, timestamp, \
+                       and size in bytes. Returns an empty list (not an error) when no backups \
+                       exist. SafeRead — no side effects."
+    )]
+    async fn list_backups(
+        &self,
+        Parameters(args): Parameters<tools::ListBackupsArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::list_backups::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
     // Classification: SudoRead. Reads preferences via CLI; requires sudo; no mutation.
     #[tool(
         description = "Read one or more Little Snitch preferences by key. Provide a list of \

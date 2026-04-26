@@ -65,6 +65,10 @@ pub static TOOLS: &[ToolMeta] = &[
         classification: Classification::SudoRead,
     },
     ToolMeta {
+        name: "list_backups",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
         name: "doctor",
         classification: Classification::SafeRead,
     },
