@@ -1,4 +1,5 @@
 pub mod add_rule_to_lsrules_file;
+pub mod backup_harness;
 pub mod create_lsrules_file;
 pub mod doctor;
 pub mod export_model_backup;
