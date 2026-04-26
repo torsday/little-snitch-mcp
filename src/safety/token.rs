@@ -91,6 +91,12 @@ impl Token {
     }
 }
 
+impl From<String> for Token {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
 impl AsRef<str> for Token {
     fn as_ref(&self) -> &str {
         &self.0
