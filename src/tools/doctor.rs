@@ -47,13 +47,13 @@ pub struct DoctorReport {
 }
 
 pub fn run(_args: DoctorArgs) -> Result<DoctorReport, String> {
-    let mut checks = Vec::new();
-
-    checks.push(check_binary());
-    checks.push(check_cli_authorized());
-    checks.push(check_touchid_sudo());
-    checks.push(check_managed_dir());
-    checks.push(check_restore_model_terminal_flag());
+    let checks = vec![
+        check_binary(),
+        check_cli_authorized(),
+        check_touchid_sudo(),
+        check_managed_dir(),
+        check_restore_model_terminal_flag(),
+    ];
 
     let ok = checks.iter().all(|c| c.status == CheckStatus::Green);
     Ok(DoctorReport { ok, checks })

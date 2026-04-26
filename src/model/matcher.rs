@@ -152,12 +152,11 @@ pub fn match_rule<'a>(
 /// spike #6.
 fn rule_applies(rule: &Rule, query: &ConnectionQuery, model: &crate::model::Model) -> bool {
     // disabled rules never apply
-    if let Some(g) = &rule.group {
-        if let Some(group) = model.groups.get(g) {
-            if group.is_active == Some(false) {
-                return false;
-            }
-        }
+    if let Some(g) = &rule.group
+        && let Some(group) = model.groups.get(g)
+        && group.is_active == Some(false)
+    {
+        return false;
     }
 
     // process match
@@ -179,12 +178,11 @@ fn rule_applies(rule: &Rule, query: &ConnectionQuery, model: &crate::model::Mode
     }
 
     // protocol match (absent → any)
-    if let Some(rule_proto) = &rule.protocol {
-        if let Some(query_proto) = query.protocol {
-            if rule_proto != query_proto {
-                return false;
-            }
-        }
+    if let Some(rule_proto) = &rule.protocol
+        && let Some(query_proto) = query.protocol
+        && rule_proto != query_proto
+    {
+        return false;
     }
 
     // ports match (absent → any). Format support is minimal: exact match
@@ -232,26 +230,23 @@ fn remote_matches(rule: &Rule, query: &ConnectionQuery) -> bool {
         let _ = special;
         return false;
     }
-    if let Some(domains) = &rule.remote_domains {
-        if let Some(host) = query.remote_hostname {
-            if string_or_vec_iter(domains).any(|d| domain_matches(d, host)) {
-                return true;
-            }
-        }
+    if let Some(domains) = &rule.remote_domains
+        && let Some(host) = query.remote_hostname
+        && string_or_vec_iter(domains).any(|d| domain_matches(d, host))
+    {
+        return true;
     }
-    if let Some(hosts) = &rule.remote_hosts {
-        if let Some(host) = query.remote_hostname {
-            if string_or_vec_iter(hosts).any(|h| h.eq_ignore_ascii_case(host)) {
-                return true;
-            }
-        }
+    if let Some(hosts) = &rule.remote_hosts
+        && let Some(host) = query.remote_hostname
+        && string_or_vec_iter(hosts).any(|h| h.eq_ignore_ascii_case(host))
+    {
+        return true;
     }
-    if let Some(addresses) = &rule.remote_addresses {
-        if let Some(ip) = query.remote_ip {
-            if string_or_vec_iter(addresses).any(|a| a == ip) {
-                return true;
-            }
-        }
+    if let Some(addresses) = &rule.remote_addresses
+        && let Some(ip) = query.remote_ip
+        && string_or_vec_iter(addresses).any(|a| a == ip)
+    {
+        return true;
     }
     false
 }
@@ -312,10 +307,10 @@ fn specificity_score(rule: &Rule) -> i32 {
     if let Some(_v) = &rule.remote_domains {
         score += 3;
     }
-    if let Some(rem) = rule.remote.as_deref() {
-        if rem != "any" {
-            score += 1;
-        }
+    if let Some(rem) = rule.remote.as_deref()
+        && rem != "any"
+    {
+        score += 1;
     }
 
     // Constraint dimensions.

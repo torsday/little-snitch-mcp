@@ -107,10 +107,10 @@ pub fn run(args: TailTrafficArgs) -> Result<TailTrafficResult, String> {
     let filtered: Vec<TrafficEntry> = all_entries
         .into_iter()
         .filter(|e| {
-            if let Some(p) = &args.process_name {
-                if !e.connecting_executable.contains_ci(p) {
-                    return false;
-                }
+            if let Some(p) = &args.process_name
+                && !e.connecting_executable.contains_ci(p)
+            {
+                return false;
             }
             if let Some(h) = &args.remote_host {
                 let needle = h.to_ascii_lowercase();
@@ -120,10 +120,10 @@ pub fn run(args: TailTrafficArgs) -> Result<TailTrafficResult, String> {
                     return false;
                 }
             }
-            if let Some(d) = &args.direction {
-                if !e.direction.eq_ignore_ascii_case(d) {
-                    return false;
-                }
+            if let Some(d) = &args.direction
+                && !e.direction.eq_ignore_ascii_case(d)
+            {
+                return false;
             }
             true
         })

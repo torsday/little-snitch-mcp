@@ -1031,10 +1031,10 @@ async fn main() -> Result<()> {
     tracing::info!("little-snitch-mcp: starting stdio server");
 
     // #12: Refuse to start if the installed LS version is below 6.3.3.
-    if let Ok(bin) = cli::resolve_binary() {
-        if let Err(e) = cli::require_compatible(&bin) {
-            anyhow::bail!("{e}");
-        }
+    if let Ok(bin) = cli::resolve_binary()
+        && let Err(e) = cli::require_compatible(&bin)
+    {
+        anyhow::bail!("{e}");
     }
 
     let managed = managed_dir::ManagedDir::bootstrap()?;

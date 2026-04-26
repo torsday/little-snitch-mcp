@@ -12,7 +12,7 @@ use std::net::IpAddr;
 use std::str::FromStr;
 
 use crate::cli::adapter::LsCli;
-use crate::model::{Model, Rule, StringOrVec};
+use crate::model::{Model, Rule};
 use crate::safety::resolver::SEED_KIND_MAP;
 
 // ─── public types ────────────────────────────────────────────────────────────
@@ -213,10 +213,8 @@ fn rule_matches(
     }
 
     // catch-all: remote is a special string value
-    if include_catch_all {
-        if let Some(rem) = &rule.remote {
-            return Some((MatchKind::CatchAll, rem.clone()));
-        }
+    if include_catch_all && let Some(rem) = &rule.remote {
+        return Some((MatchKind::CatchAll, rem.clone()));
     }
 
     None
