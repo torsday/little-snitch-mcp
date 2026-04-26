@@ -1,0 +1,46 @@
+{
+  "bundleVersion": 7172,
+  "factoryRuleSetVersion": 424,
+  "rules": [],
+  "groups": {
+    "group-builtin-macos": {
+      "name": "macOS Services",
+      "kind": "builtinMacOSServices",
+      "isActive": true
+    },
+    "group-builtin-icloud": {
+      "name": "iCloud Services",
+      "kind": "builtinICloudServices",
+      "isActive": true
+    },
+    "group-custom-work": {
+      "name": "Work Rules",
+      "isActive": true
+    },
+    "group-custom-disabled": {
+      "name": "Disabled Custom Group",
+      "isActive": false
+    }
+  },
+  "profiles": {
+    "profile-home": {
+      "name": "Home",
+      "isActive": false
+    },
+    "profile-work": {
+      "name": "Work",
+      "isActive": true
+    }
+  },
+  "noProfilePseudoProfile": {},
+  "globalDefaults": {},
+  "users": [],
+  "codeRequirements": {},
+  "developerTeamNames": {},
+  "lastSeenExecutableByCodeIdentifier": {},
+  "networkTriggers": [],
+  "blocklistStatistics": {},
+  "disabledDomainsInLists": [],
+  "disabledHostNamesInLists": [],
+  "disabledIPAddressRangesInLists": []
+}

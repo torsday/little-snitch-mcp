@@ -101,15 +101,14 @@ pub struct PrepareEnableRuleGroupResult {
     pub diff_summary: String,
 }
 
-pub fn prepare_enable(
+/// Inner prepare — accepts a pre-loaded model. Allows integration tests to
+/// inject a fixture model without invoking the `littlesnitch` binary.
+pub fn prepare_enable_with_model(
     session: &Arc<Session>,
-    args: PrepareEnableRuleGroupArgs,
+    input: &str,
+    model: &Model,
 ) -> Result<PrepareEnableRuleGroupResult, String> {
-    if args.input.is_empty() {
-        return Err("input must not be empty".into());
-    }
-    let model = load_live_model()?;
-    let resolved_name = resolve_to_display_name(&args.input, &model)?;
+    let resolved_name = resolve_to_display_name(input, model)?;
     let diff_sha = enable_sha(&resolved_name);
     let payload = crate::safety::token::payload(
         "enable_rule_group",
@@ -125,6 +124,17 @@ pub fn prepare_enable(
         diff_summary: format!("enable rule group \"{}\"", resolved_name),
         resolved_name,
     })
+}
+
+pub fn prepare_enable(
+    session: &Arc<Session>,
+    args: PrepareEnableRuleGroupArgs,
+) -> Result<PrepareEnableRuleGroupResult, String> {
+    if args.input.is_empty() {
+        return Err("input must not be empty".into());
+    }
+    let model = load_live_model()?;
+    prepare_enable_with_model(session, &args.input, &model)
 }
 
 // ─── enable_rule_group ───────────────────────────────────────────────────────
@@ -209,17 +219,17 @@ pub struct PrepareDisableRuleGroupResult {
     pub is_builtin: bool,
 }
 
-pub fn prepare_disable(
+/// Inner prepare — accepts a pre-loaded model. Allows integration tests to
+/// inject a fixture model without invoking the `littlesnitch` binary.
+pub fn prepare_disable_with_model(
     session: &Arc<Session>,
-    args: PrepareDisableRuleGroupArgs,
+    input: &str,
+    acknowledge_builtin: Option<bool>,
+    model: &Model,
 ) -> Result<PrepareDisableRuleGroupResult, String> {
-    if args.input.is_empty() {
-        return Err("input must not be empty".into());
-    }
-    let model = load_live_model()?;
-    let resolved_name = resolve_to_display_name(&args.input, &model)?;
-    let builtin = is_builtin_group(&resolved_name, &model);
-    if builtin && args.acknowledge_builtin != Some(true) {
+    let resolved_name = resolve_to_display_name(input, model)?;
+    let builtin = is_builtin_group(&resolved_name, model);
+    if builtin && acknowledge_builtin != Some(true) {
         return Err(format!(
             "group {:?} is a builtin subscription — disabling it affects macOS/iCloud \
              system-level rules. Set acknowledge_builtin: true to confirm.",
@@ -246,6 +256,17 @@ pub fn prepare_disable(
         resolved_name,
         is_builtin: builtin,
     })
+}
+
+pub fn prepare_disable(
+    session: &Arc<Session>,
+    args: PrepareDisableRuleGroupArgs,
+) -> Result<PrepareDisableRuleGroupResult, String> {
+    if args.input.is_empty() {
+        return Err("input must not be empty".into());
+    }
+    let model = load_live_model()?;
+    prepare_disable_with_model(session, &args.input, args.acknowledge_builtin, &model)
 }
 
 // ─── disable_rule_group ──────────────────────────────────────────────────────
