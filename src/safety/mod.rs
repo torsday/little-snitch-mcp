@@ -3,13 +3,12 @@
 //! The submodules here express the safety contract documented in
 //! [ADR-0004](../../docs/adr/0004-safety-permissions-and-confirmation.md):
 //! what each tool is *allowed* to do, and what runtime checks gate it.
-//! Rule-level refusals will land in a sibling submodule as
-//! [#46](https://github.com/torsday/little-snitch-mcp/issues/46) closes.
 
 pub mod classification;
 pub mod cli;
 pub mod prefs;
 pub mod registry;
+pub mod rules;
 pub mod schema;
 pub mod secret_prefs;
 pub mod sudo_mode;
@@ -23,6 +22,7 @@ pub use prefs::{
     is_kill_switch_key, is_writable, refuse_if_kill_switch, require_writable,
 };
 pub use registry::{TOOLS, ToolMeta};
+pub use rules::{GuardResult, Intent, guard};
 pub use schema::{SchemaMismatch, check_bundle_version, extract_bundle_version};
 pub use sudo_mode::{
     disable_live_writes_requested, is_root, live_writes_enabled, require_live_write_allowed,
