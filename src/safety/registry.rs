@@ -72,6 +72,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "tail_log",
         classification: Classification::SafeRead,
     },
+    ToolMeta {
+        name: "warm_sudo",
+        classification: Classification::SafeRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.

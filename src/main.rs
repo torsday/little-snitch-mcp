@@ -274,6 +274,30 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SafeRead. Surfaces setup instructions + polls for sudo readiness.
+    #[tool(
+        description = "Surface TouchID-for-sudo setup instructions and poll until sudo becomes \
+                       available for this MCP session. Call this when live-write tools report \
+                       that sudo is unavailable. Returns: current TouchID status, copy-pasteable \
+                       setup commands (Tier 1: one-time TouchID config; Tier 3: terminal keepalive), \
+                       and whether sudo is available now. If sudo is not immediately available, \
+                       polls `sudo -n true` every 5 s for up to 60 s and returns success when \
+                       it detects sudo has been authenticated. On success, re-enables live-write \
+                       tools for the current session."
+    )]
+    async fn warm_sudo(
+        &self,
+        Parameters(args): Parameters<tools::WarmSudoArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::warm_sudo::run(args).await {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]

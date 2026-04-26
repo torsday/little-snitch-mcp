@@ -9,6 +9,7 @@ pub mod remove_rule_from_lsrules_file;
 pub mod tail_log;
 pub mod update_rule_in_lsrules_file;
 pub mod validate_lsrules;
+pub mod warm_sudo;
 
 pub use add_rule_to_lsrules_file::AddRuleArgs;
 pub use create_lsrules_file::CreateLsrulesArgs;
@@ -20,3 +21,4 @@ pub use remove_rule_from_lsrules_file::RemoveRuleArgs;
 pub use tail_log::TailLogArgs;
 pub use update_rule_in_lsrules_file::UpdateRuleArgs;
 pub use validate_lsrules::ValidateLsrulesArgs;
+pub use warm_sudo::WarmSudoArgs;
