@@ -652,10 +652,13 @@ impl EchoServer {
         }
     }
 
-    /// Resolve a rule-group name and issue a confirmation token.
-    ///
-    /// Pass the returned token and `resolved_name` to `enable_rule_group`
-    /// after user approval.
+    // Classification: LiveWrite (prepare step — read-only, issues token only).
+    #[tool(
+        description = "Resolve a rule-group name and issue a confirmation token for enabling it. \
+                       Pass a display name, kind, or group ID in `input`; the resolver returns \
+                       the canonical name. Pass the returned `token` and `resolved_name` to \
+                       `enable_rule_group` after the user approves the change."
+    )]
     async fn prepare_enable_rule_group(
         &self,
         Parameters(args): Parameters<tools::PrepareEnableRuleGroupArgs>,
@@ -669,7 +672,12 @@ impl EchoServer {
         }
     }
 
-    /// Enable a rule group. Requires the token from `prepare_enable_rule_group`.
+    // Classification: LiveWrite. Enables a rule group via `littlesnitch rulegroup -e`.
+    #[tool(
+        description = "Enable a Little Snitch rule group. Requires `resolved_name` and `token` \
+                       from `prepare_enable_rule_group`. Takes an automatic backup before \
+                       applying. LiveWrite — modifies the live Little Snitch model."
+    )]
     async fn enable_rule_group(
         &self,
         Parameters(args): Parameters<tools::EnableRuleGroupArgs>,
@@ -683,11 +691,13 @@ impl EchoServer {
         }
     }
 
-    /// Resolve a rule-group name and issue a confirmation token for disabling.
-    ///
-    /// For builtin groups (macOS Services, iCloud Services, etc.) you must
-    /// pass `acknowledge_builtin: true`. Pass the returned token and
-    /// `resolved_name` to `disable_rule_group` after user approval.
+    // Classification: LiveWrite (prepare step — read-only, issues token only).
+    #[tool(
+        description = "Resolve a rule-group name and issue a confirmation token for disabling it. \
+                       For builtin groups (macOS Services, iCloud Services, etc.) you must pass \
+                       `acknowledge_builtin: true`; the call refuses without it. Pass the returned \
+                       `token` and `resolved_name` to `disable_rule_group` after user approval."
+    )]
     async fn prepare_disable_rule_group(
         &self,
         Parameters(args): Parameters<tools::PrepareDisableRuleGroupArgs>,
@@ -701,7 +711,12 @@ impl EchoServer {
         }
     }
 
-    /// Disable a rule group. Requires the token from `prepare_disable_rule_group`.
+    // Classification: LiveWrite. Disables a rule group via `littlesnitch rulegroup -d`.
+    #[tool(
+        description = "Disable a Little Snitch rule group. Requires `resolved_name` and `token` \
+                       from `prepare_disable_rule_group`. Takes an automatic backup before \
+                       applying. LiveWrite — modifies the live Little Snitch model."
+    )]
     async fn disable_rule_group(
         &self,
         Parameters(args): Parameters<tools::DisableRuleGroupArgs>,
@@ -715,10 +730,13 @@ impl EchoServer {
         }
     }
 
-    /// Return all rules whose `process` field matches the given path or code-id.
-    ///
-    /// Results are grouped by rule group (display name resolved via the S4
-    /// chain). Rules in disabled groups are flagged with `group_active: false`.
+    // Classification: SafeRead. Returns rules matching a given process path or code-id.
+    #[tool(
+        description = "Return all Little Snitch rules whose `process` field matches the given \
+                       path or code-id. Results are grouped by rule group (display name resolved \
+                       via the S4 chain); rules in disabled groups are flagged with \
+                       `group_active: false`. SafeRead — no side effects."
+    )]
     async fn get_rules_for_process(
         &self,
         Parameters(args): Parameters<tools::GetRulesForProcessArgs>,
