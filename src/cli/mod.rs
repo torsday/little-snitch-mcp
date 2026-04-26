@@ -5,6 +5,8 @@
 
 pub mod adapter;
 pub mod binary;
+pub mod version;
 
 pub use adapter::{LsCli, LsCliError};
 pub use binary::{LsBinaryNotFound, resolve_binary};
+pub use version::{Version, VersionGateError, VersionResult, require_compatible};

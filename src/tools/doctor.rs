@@ -7,11 +7,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::cli::adapter::{LsCli, LsCliError};
 use crate::cli::binary::resolve_binary;
+use crate::cli::version::{VersionResult, check as check_version};
 use crate::managed_dir::ManagedDir;
 use crate::safety::RESTORE_MODEL_TERMINAL_GUARD_FLAG;
-
-// Minimum LS version the MCP requires.
-const MIN_VERSION: (u32, u32, u32) = (6, 3, 3);
+use crate::safety::touchid::{TouchIdSudoStatus, detect as detect_touchid};
 
 /// Input for the `doctor` tool — no parameters.
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -74,52 +73,26 @@ fn check_binary() -> Check {
                 "Install Little Snitch 6.3.3+ from https://obdev.at/products/littlesnitch".into(),
             ),
         },
-        Ok(bin) => {
-            // Run --version and parse major.minor.patch
-            match std::process::Command::new(&bin).arg("--version").output() {
-                Err(e) => Check {
-                    name: "ls_binary",
-                    status: CheckStatus::Red,
-                    message: format!("could not run {bin:?}: {e}"),
-                    remediation: None,
-                },
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout);
-                    let version_str = stdout.trim();
-                    match parse_version(version_str) {
-                        None => Check {
-                            name: "ls_binary",
-                            status: CheckStatus::Yellow,
-                            message: format!(
-                                "found at {bin:?} but could not parse version: {version_str:?}"
-                            ),
-                            remediation: Some("Upgrade Little Snitch to ≥ 6.3.3".into()),
-                        },
-                        Some(v) if v < MIN_VERSION => Check {
-                            name: "ls_binary",
-                            status: CheckStatus::Red,
-                            message: format!(
-                                "version {}.{}.{} is below minimum {}.{}.{}",
-                                v.0, v.1, v.2, MIN_VERSION.0, MIN_VERSION.1, MIN_VERSION.2
-                            ),
-                            remediation: Some("Upgrade Little Snitch to ≥ 6.3.3".into()),
-                        },
-                        Some(v) => Check {
-                            name: "ls_binary",
-                            status: CheckStatus::Green,
-                            message: format!(
-                                "found at {} (version {}.{}.{})",
-                                bin.display(),
-                                v.0,
-                                v.1,
-                                v.2
-                            ),
-                            remediation: None,
-                        },
-                    }
-                }
-            }
-        }
+        Ok(bin) => match check_version(&bin) {
+            VersionResult::Compatible(v) => Check {
+                name: "ls_binary",
+                status: CheckStatus::Green,
+                message: format!("found at {} (version {v})", bin.display()),
+                remediation: None,
+            },
+            VersionResult::TooOld(v) => Check {
+                name: "ls_binary",
+                status: CheckStatus::Red,
+                message: format!("version {v} is below minimum 6.3.3"),
+                remediation: Some("Upgrade Little Snitch to ≥ 6.3.3".into()),
+            },
+            VersionResult::Unparseable(s) => Check {
+                name: "ls_binary",
+                status: CheckStatus::Yellow,
+                message: format!("found at {bin:?} but could not parse version: {s:?}"),
+                remediation: Some("Upgrade Little Snitch to ≥ 6.3.3".into()),
+            },
+        },
     }
 }
 
@@ -176,34 +149,30 @@ fn check_cli_authorized() -> Check {
 }
 
 fn check_touchid_sudo() -> Check {
-    // TouchID-for-sudo is configured via `auth sufficient pam_tid.so` in
-    // /etc/pam.d/sudo or /etc/pam.d/sudo_local.
-    let pam_files = ["/etc/pam.d/sudo_local", "/etc/pam.d/sudo"];
-    for path in &pam_files {
-        if let Ok(contents) = std::fs::read_to_string(path) {
-            let enabled = contents
-                .lines()
-                .any(|l| !l.trim_start().starts_with('#') && l.contains("pam_tid.so"));
-            if enabled {
-                return Check {
-                    name: "touchid_sudo",
-                    status: CheckStatus::Green,
-                    message: format!("pam_tid.so enabled in {path}"),
-                    remediation: None,
-                };
-            }
-        }
-    }
-    Check {
-        name: "touchid_sudo",
-        status: CheckStatus::Yellow,
-        message: "TouchID for sudo is not configured — sudo tools will require a terminal TTY"
-            .into(),
-        remediation: Some(
-            "Add `auth sufficient pam_tid.so` as the first auth line in \
-             /etc/pam.d/sudo_local (create the file if needed)"
+    match detect_touchid() {
+        TouchIdSudoStatus::Configured => Check {
+            name: "touchid_sudo",
+            status: CheckStatus::Green,
+            message: "pam_tid.so is enabled for sudo".into(),
+            remediation: None,
+        },
+        TouchIdSudoStatus::NotConfigured | TouchIdSudoStatus::FileMissing => Check {
+            name: "touchid_sudo",
+            status: CheckStatus::Yellow,
+            message: "TouchID for sudo is not configured — sudo tools will require a terminal TTY"
                 .into(),
-        ),
+            remediation: Some(
+                "Add `auth sufficient pam_tid.so` as the first auth line in \
+                 /etc/pam.d/sudo_local (create the file if needed)"
+                    .into(),
+            ),
+        },
+        TouchIdSudoStatus::ReadError(e) => Check {
+            name: "touchid_sudo",
+            status: CheckStatus::Yellow,
+            message: format!("could not read PAM config: {e}"),
+            remediation: None,
+        },
     }
 }
 
@@ -255,8 +224,7 @@ fn check_managed_dir() -> Check {
 
 fn check_restore_model_terminal_flag() -> Check {
     // The --preserve-terminal-access flag (RESTORE_MODEL_TERMINAL_GUARD_FLAG = "-t")
-    // was added in LS 6.3.3. We infer its presence from the version rather than
-    // probing --help, which avoids a restore-model subprocess without a file argument.
+    // was added in LS 6.3.3. We infer its presence from the version.
     match resolve_binary() {
         Err(e) => Check {
             name: "restore_model_terminal_flag",
@@ -264,58 +232,25 @@ fn check_restore_model_terminal_flag() -> Check {
             message: format!("binary unavailable: {e}"),
             remediation: None,
         },
-        Ok(bin) => match std::process::Command::new(&bin).arg("--version").output() {
-            Err(e) => Check {
+        Ok(bin) => match check_version(&bin) {
+            VersionResult::Compatible(v) => Check {
                 name: "restore_model_terminal_flag",
-                status: CheckStatus::Red,
-                message: format!("could not read version: {e}"),
+                status: CheckStatus::Green,
+                message: format!(
+                    "restore-model supports {RESTORE_MODEL_TERMINAL_GUARD_FLAG} (LS {v} ≥ 6.3.3)"
+                ),
                 remediation: None,
             },
-            Ok(out) => {
-                let stdout = String::from_utf8_lossy(&out.stdout);
-                let version_str = stdout.trim();
-                match parse_version(version_str) {
-                    Some(v) if v >= MIN_VERSION => Check {
-                        name: "restore_model_terminal_flag",
-                        status: CheckStatus::Green,
-                        message: format!(
-                            "restore-model supports {} (LS {}.{}.{} ≥ 6.3.3)",
-                            RESTORE_MODEL_TERMINAL_GUARD_FLAG, v.0, v.1, v.2
-                        ),
-                        remediation: None,
-                    },
-                    _ => Check {
-                        name: "restore_model_terminal_flag",
-                        status: CheckStatus::Red,
-                        message: format!(
-                            "restore-model --preserve-terminal-access unavailable \
-                                 (version {:?} is below 6.3.3) — \
-                                 model-surgery tools are disabled",
-                            version_str
-                        ),
-                        remediation: Some("Upgrade Little Snitch to ≥ 6.3.3".into()),
-                    },
-                }
-            }
+            _ => Check {
+                name: "restore_model_terminal_flag",
+                status: CheckStatus::Red,
+                message: "restore-model --preserve-terminal-access unavailable \
+                          (version below 6.3.3) — model-surgery tools are disabled"
+                    .into(),
+                remediation: Some("Upgrade Little Snitch to ≥ 6.3.3".into()),
+            },
         },
     }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn parse_version(s: &str) -> Option<(u32, u32, u32)> {
-    // Accept "6.3.3" or "Version 6.3.3" or "littlesnitch 6.3.3"
-    let trimmed = s.rsplit_once(' ').map(|(_, v)| v).unwrap_or(s);
-    let parts: Vec<&str> = trimmed.split('.').collect();
-    if parts.len() < 3 {
-        return None;
-    }
-    let major = parts[0].parse().ok()?;
-    let minor = parts[1].parse().ok()?;
-    let patch = parts[2].split('-').next()?.parse().ok()?;
-    Some((major, minor, patch))
 }
 
 // ---------------------------------------------------------------------------
@@ -325,31 +260,6 @@ fn parse_version(s: &str) -> Option<(u32, u32, u32)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn parse_version_basic() {
-        assert_eq!(parse_version("6.3.3"), Some((6, 3, 3)));
-    }
-
-    #[test]
-    fn parse_version_with_prefix() {
-        assert_eq!(parse_version("littlesnitch 6.4.0"), Some((6, 4, 0)));
-    }
-
-    #[test]
-    fn parse_version_with_build_suffix() {
-        assert_eq!(parse_version("6.3.3-beta.1"), Some((6, 3, 3)));
-    }
-
-    #[test]
-    fn parse_version_too_short_returns_none() {
-        assert_eq!(parse_version("6.3"), None);
-    }
-
-    #[test]
-    fn parse_version_non_numeric_returns_none() {
-        assert_eq!(parse_version("not-a-version"), None);
-    }
 
     #[test]
     fn doctor_report_ok_only_when_all_green() {

@@ -14,7 +14,7 @@ use rmcp::{
 };
 use tracing_subscriber::EnvFilter;
 
-use little_snitch_mcp::{managed_dir, resources, tools};
+use little_snitch_mcp::{cli, managed_dir, resources, tools};
 
 #[derive(Parser)]
 #[command(name = env!("CARGO_PKG_NAME"), version, about = env!("CARGO_PKG_DESCRIPTION"))]
@@ -369,15 +369,24 @@ impl ServerHandler for EchoServer {
 async fn main() -> Result<()> {
     Cli::parse();
 
+    // #10: LSMCP_LOG_LEVEL controls tracing level; default info.
+    // stdout is the JSON-RPC transport — all log output must go to stderr.
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+            EnvFilter::try_from_env("LSMCP_LOG_LEVEL").unwrap_or_else(|_| EnvFilter::new("info")),
         )
         .with_writer(std::io::stderr)
         .with_ansi(false)
         .init();
 
-    tracing::info!("little-snitch-mcp spike: starting stdio server");
+    tracing::info!("little-snitch-mcp: starting stdio server");
+
+    // #12: Refuse to start if the installed LS version is below 6.3.3.
+    if let Ok(bin) = cli::resolve_binary() {
+        if let Err(e) = cli::require_compatible(&bin) {
+            anyhow::bail!("{e}");
+        }
+    }
 
     let managed = managed_dir::ManagedDir::bootstrap()?;
     tracing::info!(root = %managed.root.display(), "managed directory ready");
