@@ -51,6 +51,18 @@ impl Default for EchoServer {
 
 #[prompt_router]
 impl EchoServer {
+    /// Instructs the LLM to call `get_rules_for_process` and produce a
+    /// human-readable audit report: rules grouped by group, disabled
+    /// groups flagged, redundant and conflicting rules identified.
+    /// Read-only — no live mutation.
+    #[prompt(name = "audit_rules_for_process")]
+    fn audit_rules_for_process(
+        &self,
+        Parameters(args): Parameters<prompts::audit_rules_for_process::Args>,
+    ) -> Vec<PromptMessage> {
+        prompts::audit_rules_for_process::build_messages(&args)
+    }
+
     /// Drafts a `.lsrules` blocking the named application's telemetry
     /// hosts. The LLM, having read this prompt, calls
     /// `create_lsrules_file` and instructs the operator to review
