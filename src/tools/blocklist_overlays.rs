@@ -43,7 +43,7 @@ pub enum BlocklistEntryKind {
 }
 
 impl BlocklistEntryKind {
-    fn array_mut<'a>(self, model: &'a mut Model) -> &'a mut Vec<RemoteOverlayEntry> {
+    fn array_mut(self, model: &mut Model) -> &mut Vec<RemoteOverlayEntry> {
         match self {
             BlocklistEntryKind::Domain => &mut model.disabled_domains_in_lists,
             BlocklistEntryKind::Host => &mut model.disabled_host_names_in_lists,

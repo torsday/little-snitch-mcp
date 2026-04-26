@@ -32,10 +32,10 @@ impl ModelCache {
     {
         let mut guard = self.0.lock().unwrap_or_else(|e| e.into_inner());
 
-        if let Some((ts, json)) = &*guard {
-            if ts.elapsed() < TTL {
-                return Ok(json.clone());
-            }
+        if let Some((ts, json)) = &*guard
+            && ts.elapsed() < TTL
+        {
+            return Ok(json.clone());
         }
 
         let json = fetch()?;

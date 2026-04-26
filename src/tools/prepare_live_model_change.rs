@@ -43,10 +43,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::model::{
-    Action, Direction, Model, NewRuleSpec, Priority, ProcessMatcher, Remote, Rule, RulePatch,
-    canonical_value, construct_at,
-};
+use crate::model::{Model, NewRuleSpec, Rule, RulePatch, canonical_value, construct_at};
 use crate::safety::{Session, token};
 
 /// Operation the operator wants to perform.
@@ -270,7 +267,7 @@ fn sha256_hex(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::StringOrVec;
+    use crate::model::{Action, Direction, Priority, ProcessMatcher, Remote, StringOrVec};
     use std::collections::HashMap;
     use std::sync::Arc;
 

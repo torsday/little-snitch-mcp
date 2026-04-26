@@ -20,7 +20,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::model::{Model, Rule, RulePatch, apply_partial_at, canonical_value};
-use crate::safety::rules::{GuardResult, Intent};
+#[cfg(test)]
+use crate::safety::GuardResult;
+use crate::safety::rules::Intent;
 use crate::safety::{Session, Token, TokenError, VerifyContext, guard};
 
 /// Tool input shape.
