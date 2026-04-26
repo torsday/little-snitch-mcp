@@ -50,10 +50,7 @@ fn display_name_for(id: &str, group: &crate::model::Group) -> String {
     if let Some(name) = &group.name {
         return name.clone();
     }
-    let kind = group
-        .kind
-        .as_deref()
-        .or(group.kind_legacy.as_deref());
+    let kind = group.kind.as_deref().or(group.kind_legacy.as_deref());
     if let Some(k) = kind {
         if let Some(mapped) = crate::safety::resolver::SEED_KIND_MAP
             .iter()
@@ -170,8 +167,10 @@ mod tests {
     fn list_groups_rule_counts() {
         let model = fixture_model();
         let summaries = list_groups(&model);
-        let by_name: std::collections::HashMap<&str, usize> =
-            summaries.iter().map(|s| (s.display_name.as_str(), s.rule_count)).collect();
+        let by_name: std::collections::HashMap<&str, usize> = summaries
+            .iter()
+            .map(|s| (s.display_name.as_str(), s.rule_count))
+            .collect();
         assert_eq!(by_name["My Rules"], 1);
         assert_eq!(by_name["macOS Services"], 1);
         assert_eq!(by_name["Empty Group"], 0);
@@ -181,8 +180,10 @@ mod tests {
     fn list_groups_is_active() {
         let model = fixture_model();
         let summaries = list_groups(&model);
-        let by_name: std::collections::HashMap<&str, bool> =
-            summaries.iter().map(|s| (s.display_name.as_str(), s.is_active)).collect();
+        let by_name: std::collections::HashMap<&str, bool> = summaries
+            .iter()
+            .map(|s| (s.display_name.as_str(), s.is_active))
+            .collect();
         assert!(by_name["My Rules"]);
         assert!(!by_name["macOS Services"]);
     }
@@ -225,9 +226,6 @@ mod tests {
 
     #[test]
     fn match_item_uri_nested_rejected() {
-        assert_eq!(
-            match_item_uri("littlesnitch://model/rule-groups/a/b"),
-            None
-        );
+        assert_eq!(match_item_uri("littlesnitch://model/rule-groups/a/b"), None);
     }
 }

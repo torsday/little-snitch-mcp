@@ -25,7 +25,10 @@ fn sha(canonical: &str) -> String {
 }
 
 fn activate_sha(name: &str) -> String {
-    sha(&format!(r#"{{"action":"activate_profile","name":"{}"}}"#, name))
+    sha(&format!(
+        r#"{{"action":"activate_profile","name":"{}"}}"#,
+        name
+    ))
 }
 
 fn deactivate_sha() -> String {

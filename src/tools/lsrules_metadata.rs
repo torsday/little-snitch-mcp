@@ -37,8 +37,8 @@ pub fn set_metadata(args: SetMetadataArgs) -> Result<SetMetadataResult, String> 
         return Err("provide at least one of `name` or `description` to update".into());
     }
 
-    let managed = ManagedDir::bootstrap()
-        .map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
+    let managed =
+        ManagedDir::bootstrap().map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
     let path = managed.lsrules_file(&args.file_name);
 
     let raw = std::fs::read_to_string(&path)
@@ -82,10 +82,7 @@ pub fn set_metadata(args: SetMetadataArgs) -> Result<SetMetadataResult, String> 
     file.write_all(after.as_bytes())
         .map_err(|e| format!("write failed: {e}"))?;
 
-    let name = doc["name"]
-        .as_str()
-        .unwrap_or(&args.file_name)
-        .to_string();
+    let name = doc["name"].as_str().unwrap_or(&args.file_name).to_string();
     let description = doc["description"].as_str().map(str::to_string);
 
     Ok(SetMetadataResult {
@@ -121,8 +118,8 @@ pub fn diff_files(args: DiffLsrulesArgs) -> Result<DiffLsrulesResult, String> {
     validate_file_name(&args.file_a)?;
     validate_file_name(&args.file_b)?;
 
-    let managed = ManagedDir::bootstrap()
-        .map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
+    let managed =
+        ManagedDir::bootstrap().map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
 
     let path_a = managed.lsrules_file(&args.file_a);
     let path_b = managed.lsrules_file(&args.file_b);
@@ -132,7 +129,11 @@ pub fn diff_files(args: DiffLsrulesArgs) -> Result<DiffLsrulesResult, String> {
     let content_b = std::fs::read_to_string(&path_b)
         .map_err(|e| format!("cannot read {}: {e}", path_b.display()))?;
 
-    let diff = unified_diff(&content_a, &content_b, &format!("{} → {}", args.file_a, args.file_b));
+    let diff = unified_diff(
+        &content_a,
+        &content_b,
+        &format!("{} → {}", args.file_a, args.file_b),
+    );
     let identical = diff.is_empty();
 
     Ok(DiffLsrulesResult {
@@ -208,7 +209,10 @@ mod tests {
         let new = "line1\nline_changed\n";
         let diff = unified_diff(old, new, "test");
         assert!(diff.contains("-line2"), "diff should show removed line");
-        assert!(diff.contains("+line_changed"), "diff should show added line");
+        assert!(
+            diff.contains("+line_changed"),
+            "diff should show added line"
+        );
     }
 
     #[test]

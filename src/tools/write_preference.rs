@@ -5,10 +5,7 @@ use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 use crate::cli::adapter::LsCli;
-use crate::safety::{
-    Session, Token, VerifyContext,
-    require_writable,
-};
+use crate::safety::{Session, Token, VerifyContext, require_writable};
 
 /// Stable sentinel bundle_version for preference operations.
 /// Preferences are not schema-versioned like the model, so schema-drift
@@ -286,8 +283,14 @@ mod tests {
 
     #[test]
     fn json_value_to_cli_arg_bool() {
-        assert_eq!(json_value_to_cli_arg(&serde_json::Value::Bool(true)), "true");
-        assert_eq!(json_value_to_cli_arg(&serde_json::Value::Bool(false)), "false");
+        assert_eq!(
+            json_value_to_cli_arg(&serde_json::Value::Bool(true)),
+            "true"
+        );
+        assert_eq!(
+            json_value_to_cli_arg(&serde_json::Value::Bool(false)),
+            "false"
+        );
     }
 
     #[test]

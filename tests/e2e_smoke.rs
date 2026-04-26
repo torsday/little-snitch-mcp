@@ -99,7 +99,12 @@ fn rulegroup_model() -> Model {
 #[test]
 fn get_rules_for_process_returns_matching_rules() {
     let model = base_model();
-    let result = get_process(GetRulesForProcessArgs { process: "/usr/bin/curl".into() }, &model);
+    let result = get_process(
+        GetRulesForProcessArgs {
+            process: "/usr/bin/curl".into(),
+        },
+        &model,
+    );
     assert_eq!(result.total_count, 2, "curl has 2 rules in base model");
     assert_eq!(result.process, "/usr/bin/curl");
 }
@@ -107,7 +112,12 @@ fn get_rules_for_process_returns_matching_rules() {
 #[test]
 fn get_rules_for_process_empty_for_unmatched_process() {
     let model = base_model();
-    let result = get_process(GetRulesForProcessArgs { process: "/usr/bin/wget".into() }, &model);
+    let result = get_process(
+        GetRulesForProcessArgs {
+            process: "/usr/bin/wget".into(),
+        },
+        &model,
+    );
     assert_eq!(result.total_count, 0);
     assert!(result.groups.is_empty());
 }
@@ -115,8 +125,17 @@ fn get_rules_for_process_empty_for_unmatched_process() {
 #[test]
 fn get_rules_for_process_groups_are_sorted() {
     let model = base_model();
-    let result = get_process(GetRulesForProcessArgs { process: "/usr/bin/curl".into() }, &model);
-    let names: Vec<&str> = result.groups.iter().map(|g| g.display_name.as_str()).collect();
+    let result = get_process(
+        GetRulesForProcessArgs {
+            process: "/usr/bin/curl".into(),
+        },
+        &model,
+    );
+    let names: Vec<&str> = result
+        .groups
+        .iter()
+        .map(|g| g.display_name.as_str())
+        .collect();
     let mut sorted = names.clone();
     sorted.sort();
     assert_eq!(names, sorted, "groups must be sorted by display name");
@@ -128,7 +147,10 @@ fn get_rules_for_process_groups_are_sorted() {
 fn find_rules_for_remote_domain_match() {
     let model = base_model();
     let result = find_remote(
-        FindRulesForRemoteArgs { remote: "api.example.com".into(), include_catch_all: false },
+        FindRulesForRemoteArgs {
+            remote: "api.example.com".into(),
+            include_catch_all: false,
+        },
         &model,
     );
     assert_eq!(result.total_count, 1);
@@ -139,7 +161,10 @@ fn find_rules_for_remote_domain_match() {
 fn find_rules_for_remote_cidr_match() {
     let model = base_model();
     let result = find_remote(
-        FindRulesForRemoteArgs { remote: "198.51.100.42".into(), include_catch_all: false },
+        FindRulesForRemoteArgs {
+            remote: "198.51.100.42".into(),
+            include_catch_all: false,
+        },
         &model,
     );
     assert_eq!(result.total_count, 1);
@@ -149,7 +174,10 @@ fn find_rules_for_remote_cidr_match() {
 fn find_rules_for_remote_no_match() {
     let model = base_model();
     let result = find_remote(
-        FindRulesForRemoteArgs { remote: "10.0.0.1".into(), include_catch_all: false },
+        FindRulesForRemoteArgs {
+            remote: "10.0.0.1".into(),
+            include_catch_all: false,
+        },
         &model,
     );
     assert_eq!(result.total_count, 0);
@@ -182,8 +210,15 @@ fn create_lsrules_file_then_prepare_and_apply_pure() {
     let current_model = base_model();
 
     // 2. prepare_pure: read+validate file, compute hash, issue token.
-    let prep = prepare_pure(&session, "test-block", managed_root, &current_model, 501, now)
-        .expect("prepare_pure must succeed");
+    let prep = prepare_pure(
+        &session,
+        "test-block",
+        managed_root,
+        &current_model,
+        501,
+        now,
+    )
+    .expect("prepare_pure must succeed");
     assert_eq!(prep.rules_to_add, 1, "one rule from denied_remote_domains");
 
     // 3. apply_pure: verify token, fold rules into model.
@@ -201,8 +236,14 @@ fn create_lsrules_file_then_prepare_and_apply_pure() {
     // The applied model should have one more rule than the base.
     assert_eq!(updated.rules.len(), current_model.rules.len() + 1);
     let new_rule = updated.rules.last().expect("must have a new rule");
-    let domains = new_rule.remote_domains.as_ref().expect("must have remote_domains");
-    assert!(domains.contains("malware.example"), "new rule must block malware.example");
+    let domains = new_rule
+        .remote_domains
+        .as_ref()
+        .expect("must have remote_domains");
+    assert!(
+        domains.contains("malware.example"),
+        "new rule must block malware.example"
+    );
 }
 
 #[test]
@@ -223,9 +264,15 @@ fn apply_pure_rejects_wrong_token() {
     create_lsrules_file::run_with_root(create_args, managed_root).expect("create must succeed");
 
     let current_model = base_model();
-    let prep =
-        prepare_pure(&session_a, "test-reject", managed_root, &current_model, 501, now)
-            .expect("prepare must succeed");
+    let prep = prepare_pure(
+        &session_a,
+        "test-reject",
+        managed_root,
+        &current_model,
+        501,
+        now,
+    )
+    .expect("prepare must succeed");
 
     // Using a different session (different HMAC key) — apply must reject.
     let err = apply_pure(
@@ -239,8 +286,13 @@ fn apply_pure_rejects_wrong_token() {
     )
     .expect_err("apply_pure with wrong session key must fail");
     let msg = format!("{err:?}");
-    assert!(msg.contains("token") || msg.contains("Token") || msg.contains("invalid") || msg.contains("Invalid"),
-        "error should mention token: {msg}");
+    assert!(
+        msg.contains("token")
+            || msg.contains("Token")
+            || msg.contains("invalid")
+            || msg.contains("Invalid"),
+        "error should mention token: {msg}"
+    );
 }
 
 // ─── Use case #4: rulegroup enable/disable ────────────────────────────────────
@@ -257,7 +309,10 @@ fn prepare_enable_rule_group_returns_token_for_disabled_group() {
     let result = prepare_enable_with_model(&session, "group-custom-disabled", &model)
         .expect("prepare_enable must succeed for a disabled group");
     assert!(!result.token.is_empty(), "must issue a token");
-    assert!(!result.resolved_name.is_empty(), "must return resolved name");
+    assert!(
+        !result.resolved_name.is_empty(),
+        "must return resolved name"
+    );
 }
 
 #[test]
@@ -268,8 +323,11 @@ fn prepare_enable_rule_group_rejects_unknown_group() {
     let err = prepare_enable_with_model(&session, "non-existent-group-xyz", &model)
         .expect_err("must fail for unknown group");
     assert!(
-        err.contains("not found") || err.contains("No group") || err.contains("no group")
-            || err.contains("ambiguous") || err.contains("unknown"),
+        err.contains("not found")
+            || err.contains("No group")
+            || err.contains("no group")
+            || err.contains("ambiguous")
+            || err.contains("unknown"),
         "got: {err}"
     );
 }
@@ -306,7 +364,10 @@ fn enable_token_rejected_when_tool_name_mismatches() {
     };
     let token = Token::from(enable_prep.token);
     let result = session.verify_at(&token, &ctx, now_secs());
-    assert!(result.is_err(), "enable token must be rejected by disable verify context");
+    assert!(
+        result.is_err(),
+        "enable token must be rejected by disable verify context"
+    );
 }
 
 // ─── Use case #5: confirmation token mismatches reject ───────────────────────
@@ -330,9 +391,15 @@ fn apply_pure_with_replayed_token_produces_mac_failure() {
     create_lsrules_file::run_with_root(create_args, managed_root).expect("create must succeed");
 
     let current_model = base_model();
-    let prep =
-        prepare_pure(&session, "test-replay", managed_root, &current_model, 501, now)
-            .expect("prepare must succeed");
+    let prep = prepare_pure(
+        &session,
+        "test-replay",
+        managed_root,
+        &current_model,
+        501,
+        now,
+    )
+    .expect("prepare must succeed");
 
     // First apply — must succeed.
     apply_pure(
@@ -371,9 +438,15 @@ fn apply_pure_with_tampered_token_is_rejected() {
     create_lsrules_file::run_with_root(create_args, managed_root).expect("create must succeed");
 
     let current_model = base_model();
-    let prep =
-        prepare_pure(&session, "test-tamper", managed_root, &current_model, 501, now)
-            .expect("prepare must succeed");
+    let prep = prepare_pure(
+        &session,
+        "test-tamper",
+        managed_root,
+        &current_model,
+        501,
+        now,
+    )
+    .expect("prepare must succeed");
 
     // Flip the last character of the token.
     let mut tampered = prep.token;
@@ -392,8 +465,12 @@ fn apply_pure_with_tampered_token_is_rejected() {
     .expect_err("tampered token must be rejected");
     let msg = format!("{err:?}");
     assert!(
-        msg.contains("token") || msg.contains("Token") || msg.contains("invalid")
-            || msg.contains("Invalid") || msg.contains("mac") || msg.contains("Mac"),
+        msg.contains("token")
+            || msg.contains("Token")
+            || msg.contains("invalid")
+            || msg.contains("Invalid")
+            || msg.contains("mac")
+            || msg.contains("Mac"),
         "error must reference token/mac failure: {msg}"
     );
 }

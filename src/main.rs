@@ -556,12 +556,10 @@ impl EchoServer {
     }
 
     // Classification: LiveWrite. Activates a named Little Snitch profile after token verification.
-    #[tool(
-        description = "Activate a named Little Snitch profile. \
+    #[tool(description = "Activate a named Little Snitch profile. \
                        Validates the profile exists, takes a pre-mutation backup, then runs \
                        `littlesnitch profile -a <name>`. Requires a token from \
-                       `prepare_activate_profile`."
-    )]
+                       `prepare_activate_profile`.")]
     async fn activate_profile(
         &self,
         Parameters(args): Parameters<tools::ActivateProfileArgs>,
@@ -595,11 +593,9 @@ impl EchoServer {
     }
 
     // Classification: LiveWrite. Deactivates all Little Snitch profiles after token verification.
-    #[tool(
-        description = "Deactivate all Little Snitch profiles (`profile -d`). \
+    #[tool(description = "Deactivate all Little Snitch profiles (`profile -d`). \
                        Takes a pre-mutation backup first. Requires a token from \
-                       `prepare_deactivate_all_profiles`."
-    )]
+                       `prepare_deactivate_all_profiles`.")]
     async fn deactivate_all_profiles(
         &self,
         Parameters(args): Parameters<tools::DeactivateAllProfilesArgs>,

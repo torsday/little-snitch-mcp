@@ -24,7 +24,10 @@ fn sha(canonical: &str) -> String {
 
 fn update_sha(scope: Option<&str>) -> String {
     let s = scope.unwrap_or("all");
-    sha(&format!(r#"{{"action":"update_factory_rule_groups","scope":"{}"}}"#, s))
+    sha(&format!(
+        r#"{{"action":"update_factory_rule_groups","scope":"{}"}}"#,
+        s
+    ))
 }
 
 // ─── prepare_update_factory_rule_groups ──────────────────────────────────────
@@ -155,11 +158,8 @@ mod tests {
     #[test]
     fn prepare_update_all_returns_token() {
         let s = session();
-        let result = prepare_update(
-            &s,
-            PrepareUpdateFactoryRuleGroupsArgs { scope: None },
-        )
-        .unwrap();
+        let result =
+            prepare_update(&s, PrepareUpdateFactoryRuleGroupsArgs { scope: None }).unwrap();
         assert!(!result.token.is_empty());
         assert_eq!(result.scope, "all");
     }

@@ -69,7 +69,9 @@ mod tests {
     use super::*;
 
     fn args(process: &str) -> Args {
-        Args { process: process.into() }
+        Args {
+            process: process.into(),
+        }
     }
 
     fn body_of(a: &Args) -> String {
@@ -87,19 +89,28 @@ mod tests {
     #[test]
     fn body_names_the_tool_to_call() {
         let s = body_of(&args("com.example.app"));
-        assert!(s.contains("get_rules_for_process"), "tool name missing: {s}");
+        assert!(
+            s.contains("get_rules_for_process"),
+            "tool name missing: {s}"
+        );
     }
 
     #[test]
     fn body_instructs_flagging_disabled_groups() {
         let s = body_of(&args("com.example.app"));
-        assert!(s.contains("DISABLED"), "disabled flag instruction missing: {s}");
+        assert!(
+            s.contains("DISABLED"),
+            "disabled flag instruction missing: {s}"
+        );
     }
 
     #[test]
     fn body_instructs_redundancy_detection() {
         let s = body_of(&args("com.example.app"));
-        assert!(s.contains("edundant"), "redundancy instruction missing: {s}");
+        assert!(
+            s.contains("edundant"),
+            "redundancy instruction missing: {s}"
+        );
     }
 
     #[test]

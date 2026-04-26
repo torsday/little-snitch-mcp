@@ -7,8 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 pub const URI: &str = "littlesnitch://model";
-pub const DESCRIPTION: &str =
-    "Full Little Snitch model JSON (rules, groups, profiles, preferences). \
+pub const DESCRIPTION: &str = "Full Little Snitch model JSON (rules, groups, profiles, preferences). \
      Cached for 5 seconds.";
 
 const TTL: Duration = Duration::from_secs(5);
@@ -31,10 +30,7 @@ impl ModelCache {
     where
         F: FnOnce() -> Result<String, String>,
     {
-        let mut guard = self
-            .0
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let mut guard = self.0.lock().unwrap_or_else(|e| e.into_inner());
 
         if let Some((ts, json)) = &*guard {
             if ts.elapsed() < TTL {
@@ -104,9 +100,7 @@ mod tests {
     #[test]
     fn fetch_error_propagates() {
         let cache = ModelCache::new();
-        let err = cache
-            .get_or_fetch(|| Err("oops".to_string()))
-            .unwrap_err();
+        let err = cache.get_or_fetch(|| Err("oops".to_string())).unwrap_err();
         assert_eq!(err, "oops");
     }
 
