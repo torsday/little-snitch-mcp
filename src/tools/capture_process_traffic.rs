@@ -184,10 +184,12 @@ mod tests {
 
     #[test]
     fn defaults_are_sane() {
-        assert!(DEFAULT_DURATION_SECS <= MAX_DURATION_SECS);
-        assert!(DEFAULT_MAX_BYTES <= MAX_ALLOWED_BYTES);
-        assert!(MAX_DURATION_SECS == 300);
-        assert!(MAX_ALLOWED_BYTES == 100 * 1024 * 1024);
+        const {
+            assert!(DEFAULT_DURATION_SECS <= MAX_DURATION_SECS);
+            assert!(DEFAULT_MAX_BYTES <= MAX_ALLOWED_BYTES);
+            assert!(MAX_DURATION_SECS == 300);
+            assert!(MAX_ALLOWED_BYTES == 100 * 1024 * 1024);
+        }
     }
 
     #[test]

@@ -431,7 +431,7 @@ mod tests {
         let m = empty_model();
         let req = ChangeRequest::UpdateRule {
             index: 5,
-            patch: serde_json::to_value(&RulePatch::default()).unwrap(),
+            patch: serde_json::to_value(RulePatch::default()).unwrap(),
         };
         let err = prepare_pure(req, &m, &s, FIXED_NOW).unwrap_err();
         match err {

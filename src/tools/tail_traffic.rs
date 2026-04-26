@@ -349,10 +349,9 @@ mod tests {
 
     #[test]
     fn max_rows_constant_reasonable() {
-        assert!(MAX_ROWS >= 1000, "MAX_ROWS should be at least 1000");
-        assert!(
-            MAX_ROWS <= 100_000,
-            "MAX_ROWS should not be unreasonably large"
-        );
+        const {
+            assert!(MAX_ROWS >= 1000);
+            assert!(MAX_ROWS <= 100_000);
+        }
     }
 }

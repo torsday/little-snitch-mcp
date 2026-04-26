@@ -116,15 +116,14 @@ mod tests {
     #[test]
     fn accepts_max_duration_bound_check_only() {
         // Only verifies the bounds logic passes — no live binary required.
-        match run(TailLogArgs {
+        if let Err(msg) = run(TailLogArgs {
             duration_secs: MAX_DURATION_SECS,
             predicate: None,
         }) {
-            Err(msg) => assert!(
+            assert!(
                 !msg.contains("exceeds maximum"),
                 "got bounds error at max: {msg}"
-            ),
-            Ok(_) => {}
+            );
         }
     }
 

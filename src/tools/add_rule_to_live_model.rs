@@ -192,7 +192,7 @@ mod tests {
         // Prepare.
         let prep = prepare_pure(
             ChangeRequest::AddRule {
-                spec: serde_json::to_value(&fixture_spec()).unwrap(),
+                spec: serde_json::to_value(fixture_spec()).unwrap(),
             },
             &m,
             &s,
@@ -222,7 +222,7 @@ mod tests {
             {
                 let prep = prepare_pure(
                     ChangeRequest::AddRule {
-                        spec: serde_json::to_value(&fixture_spec()).unwrap(),
+                        spec: serde_json::to_value(fixture_spec()).unwrap(),
                     },
                     &empty_model(),
                     &s,
@@ -270,7 +270,7 @@ mod tests {
 
         let prep = prepare_pure(
             ChangeRequest::AddRule {
-                spec: serde_json::to_value(&fixture_spec()).unwrap(),
+                spec: serde_json::to_value(fixture_spec()).unwrap(),
             },
             &m_prepare,
             &s,
@@ -292,7 +292,7 @@ mod tests {
         let m = empty_model();
         let prep = prepare_pure(
             ChangeRequest::AddRule {
-                spec: serde_json::to_value(&fixture_spec()).unwrap(),
+                spec: serde_json::to_value(fixture_spec()).unwrap(),
             },
             &m,
             &s,
@@ -348,7 +348,7 @@ mod tests {
 
         let prep = prepare_pure(
             ChangeRequest::AddRule {
-                spec: serde_json::to_value(&fixture_spec()).unwrap(),
+                spec: serde_json::to_value(fixture_spec()).unwrap(),
             },
             &m,
             &s,
@@ -378,7 +378,7 @@ mod tests {
         // Build a token for a path-existing rule.
         let prep = prepare_pure(
             ChangeRequest::AddRule {
-                spec: serde_json::to_value(&fixture_spec()).unwrap(),
+                spec: serde_json::to_value(fixture_spec()).unwrap(),
             },
             &m,
             &s,
