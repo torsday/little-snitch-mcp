@@ -521,6 +521,122 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SafeRead. Issues a confirmation token for activating a profile.
+    #[tool(
+        description = "Prepare a confirmation token for activating a named Little Snitch profile. \
+                       Call this first, present the summary to the user, then pass the token to \
+                       `activate_profile` after approval."
+    )]
+    async fn prepare_activate_profile(
+        &self,
+        Parameters(args): Parameters<tools::PrepareActivateProfileArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_profiles::prepare_activate(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: LiveWrite. Activates a named Little Snitch profile after token verification.
+    #[tool(
+        description = "Activate a named Little Snitch profile. \
+                       Validates the profile exists, takes a pre-mutation backup, then runs \
+                       `littlesnitch profile -a <name>`. Requires a token from \
+                       `prepare_activate_profile`."
+    )]
+    async fn activate_profile(
+        &self,
+        Parameters(args): Parameters<tools::ActivateProfileArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_profiles::activate(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: SafeRead. Issues a confirmation token for deactivating all profiles.
+    #[tool(
+        description = "Prepare a confirmation token for deactivating all Little Snitch profiles. \
+                       Call this first, present the summary to the user, then pass the token to \
+                       `deactivate_all_profiles` after approval."
+    )]
+    async fn prepare_deactivate_all_profiles(
+        &self,
+        Parameters(args): Parameters<tools::PrepareDeactivateAllProfilesArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_profiles::prepare_deactivate(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: LiveWrite. Deactivates all Little Snitch profiles after token verification.
+    #[tool(
+        description = "Deactivate all Little Snitch profiles (`profile -d`). \
+                       Takes a pre-mutation backup first. Requires a token from \
+                       `prepare_deactivate_all_profiles`."
+    )]
+    async fn deactivate_all_profiles(
+        &self,
+        Parameters(args): Parameters<tools::DeactivateAllProfilesArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_profiles::deactivate_all(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: SafeRead. Issues a confirmation token for updating factory rule groups.
+    #[tool(
+        description = "Prepare a confirmation token for updating Little Snitch factory rule groups. \
+                       Optional `scope`: \"apple\", \"third-party\", or \"all\" (default). \
+                       Call this first, then pass the token to `update_factory_rule_groups`."
+    )]
+    async fn prepare_update_factory_rule_groups(
+        &self,
+        Parameters(args): Parameters<tools::PrepareUpdateFactoryRuleGroupsArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::update_factory_rule_groups::prepare_update(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: LiveWrite. Refreshes factory rule groups from LS-managed sources.
+    #[tool(
+        description = "Refresh Little Snitch factory rule groups from LS-managed sources. \
+                       Optional `scope`: \"apple\" (`-a`), \"third-party\" (`-t`), or \"all\" (default). \
+                       Takes a pre-mutation backup first. Requires a token from \
+                       `prepare_update_factory_rule_groups`."
+    )]
+    async fn update_factory_rule_groups(
+        &self,
+        Parameters(args): Parameters<tools::UpdateFactoryRuleGroupsArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::update_factory_rule_groups::update(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
