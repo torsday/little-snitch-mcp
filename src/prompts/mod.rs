@@ -10,3 +10,4 @@
 //! prompt-vs-tool separation rationale.
 
 pub mod block_telemetry_for_app;
+pub mod prepare_incident_block;
