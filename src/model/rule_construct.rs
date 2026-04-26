@@ -51,7 +51,7 @@ use crate::model::rule::{Action, Direction, Origin, Priority, Rule, StringOrVec}
 
 /// Process side of the rule — exactly one variant must be supplied.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum ProcessMatcher {
     /// Exact path on disk. The constructor refuses if the path doesn't
     /// exist (per ADR-0004 §10).
@@ -70,7 +70,7 @@ pub enum ProcessMatcher {
 
 /// Remote side of the rule — exactly one variant must be supplied.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum Remote {
     /// One or more domains.
     Domains(Vec<String>),
