@@ -458,6 +458,47 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: ManagedWrite. Edits metadata fields in a managed .lsrules file.
+    #[tool(
+        description = "Update the `name` and/or `description` metadata fields in a managed \
+                       .lsrules file without touching the `rules` array. \
+                       At least one of `name` or `description` must be provided. \
+                       Pass an empty string for `description` to remove the field. \
+                       Returns the updated values and a unified diff."
+    )]
+    async fn set_lsrules_metadata(
+        &self,
+        Parameters(args): Parameters<tools::SetMetadataArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::lsrules_metadata::set_metadata(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    // Classification: SafeRead. Computes a diff between two managed files; no mutation.
+    #[tool(
+        description = "Compute a unified diff between two managed .lsrules files. \
+                       Returns the diff as a string and an `identical` boolean. \
+                       Both files must exist in the managed rules directory. \
+                       Safe to call at any time — no mutations."
+    )]
+    async fn diff_lsrules_files(
+        &self,
+        Parameters(args): Parameters<tools::DiffLsrulesArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::lsrules_metadata::diff_files(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
