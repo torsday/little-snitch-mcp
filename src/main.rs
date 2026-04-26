@@ -38,6 +38,7 @@ pub struct EchoServer {
     #[allow(dead_code)] // read by the #[prompt_handler] macro expansion
     prompt_router: PromptRouter<EchoServer>,
     session: Arc<safety::Session>,
+    model_cache: resources::model::ModelCache,
 }
 
 impl Default for EchoServer {
@@ -71,6 +72,7 @@ impl EchoServer {
             tool_router: Self::tool_router(),
             prompt_router: Self::prompt_router(),
             session,
+            model_cache: resources::model::ModelCache::new(),
         }
     }
 
@@ -760,9 +762,23 @@ impl ServerHandler for EchoServer {
             },
             annotations: None,
         };
+        let model_resource = Annotated {
+            raw: RawResource {
+                uri: resources::model::URI.to_string(),
+                name: "model".to_string(),
+                title: Some("Little Snitch model".to_string()),
+                description: Some(resources::model::DESCRIPTION.to_string()),
+                mime_type: Some("application/json".to_string()),
+                size: None,
+                icons: None,
+                meta: None,
+            },
+            annotations: None,
+        };
         Ok(ListResourcesResult::with_all_items(vec![
             resource,
             schema_resource,
+            model_resource,
         ]))
     }
 
@@ -795,6 +811,18 @@ impl ServerHandler for EchoServer {
     ) -> Result<ReadResourceResult, McpError> {
         let managed = managed_dir::ManagedDir::bootstrap()
             .map_err(|e| McpError::internal_error(format!("managed directory error: {e}"), None))?;
+
+        // Model resource — live model JSON, briefly cached.
+        if request.uri == resources::model::URI {
+            let json = self
+                .model_cache
+                .get_or_fetch(resources::model::fetch_model_json)
+                .map_err(|e| McpError::internal_error(e, None))?;
+            return Ok(ReadResourceResult::new(vec![ResourceContents::text(
+                json,
+                resources::model::URI,
+            )]));
+        }
 
         // Schema resource — served directly from the embedded string; no ManagedDir needed.
         if request.uri == resources::schema::URI {
