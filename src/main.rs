@@ -252,6 +252,28 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SafeRead. Wraps `littlesnitch log -j -l <duration>`; no sudo required.
+    #[tool(
+        description = "Stream Little Snitch connection log events as JSON for a bounded duration. \
+                       Wraps `littlesnitch log -j -l <duration>`. No sudo or 'Allow access via \
+                       Terminal' required (empirically verified). \
+                       Provide `duration_secs` (1–3600) and an optional `predicate` \
+                       (NSPredicate string, e.g. `\"processName == 'curl'\"`). \
+                       Returns a list of parsed JSON log events plus the total count."
+    )]
+    async fn tail_log(
+        &self,
+        Parameters(args): Parameters<tools::TailLogArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::tail_log::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]

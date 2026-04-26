@@ -5,6 +5,7 @@ pub mod export_model_backup;
 pub mod list_preferences;
 pub mod read_preference;
 pub mod remove_rule_from_lsrules_file;
+pub mod tail_log;
 pub mod update_rule_in_lsrules_file;
 pub mod validate_lsrules;
 
@@ -15,5 +16,6 @@ pub use export_model_backup::ExportModelBackupArgs;
 pub use list_preferences::ListPreferencesArgs;
 pub use read_preference::ReadPreferenceArgs;
 pub use remove_rule_from_lsrules_file::RemoveRuleArgs;
+pub use tail_log::TailLogArgs;
 pub use update_rule_in_lsrules_file::UpdateRuleArgs;
 pub use validate_lsrules::ValidateLsrulesArgs;
