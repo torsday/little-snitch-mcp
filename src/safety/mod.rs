@@ -12,6 +12,7 @@ pub mod prefs;
 pub mod registry;
 pub mod schema;
 pub mod secret_prefs;
+pub mod sudo_mode;
 pub mod token;
 pub mod touchid;
 
@@ -23,5 +24,9 @@ pub use prefs::{
 };
 pub use registry::{TOOLS, ToolMeta};
 pub use schema::{SchemaMismatch, check_bundle_version, extract_bundle_version};
+pub use sudo_mode::{
+    disable_live_writes_requested, is_root, live_writes_enabled, require_live_write_allowed,
+    reset_sudo_cache,
+};
 pub use token::{Session, Token, TokenError, TokenPayload, VerifiedToken, VerifyContext};
 pub use touchid::{TouchIdSudoStatus, detect as detect_touchid_sudo};
