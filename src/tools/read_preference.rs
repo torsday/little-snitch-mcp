@@ -26,16 +26,16 @@ pub fn run(args: ReadPreferenceArgs) -> Result<ReadPreferenceResult, String> {
     if args.keys.is_empty() {
         return Err("`keys` must not be empty".into());
     }
+    if let Some(k) = args.keys.iter().find(|k| k.is_empty()) {
+        let _ = k;
+        return Err("preference key must not be empty".into());
+    }
 
     let cli = LsCli::resolve().map_err(|e| format!("littlesnitch binary not found: {e}"))?;
 
     let mut values = HashMap::new();
 
     for key in &args.keys {
-        if key.is_empty() {
-            return Err("preference key must not be empty".into());
-        }
-
         let output = cli
             .run(&["read-preference", key.as_str()])
             .map_err(|e| format!("read-preference {key:?} failed: {e}"))?;
