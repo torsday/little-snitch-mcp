@@ -50,8 +50,19 @@ pub fn run(args: CreateLsrulesArgs) -> Result<CreateResult, String> {
 
     let managed =
         ManagedDir::bootstrap().map_err(|e| format!("cannot bootstrap managed directory: {e}"))?;
+    run_inner(args, &managed.rules)
+}
 
-    let target = managed.lsrules_file(&args.name);
+/// Inner implementation — accepts an explicit `rules_dir` path for testing.
+pub fn run_with_root(args: CreateLsrulesArgs, managed_root: &std::path::Path) -> Result<CreateResult, String> {
+    let rules_dir = managed_root.join("rules");
+    std::fs::create_dir_all(&rules_dir)
+        .map_err(|e| format!("cannot create rules dir {rules_dir:?}: {e}"))?;
+    run_inner(args, &rules_dir)
+}
+
+fn run_inner(args: CreateLsrulesArgs, rules_dir: &std::path::Path) -> Result<CreateResult, String> {
+    let target = rules_dir.join(format!("{}.lsrules", args.name));
 
     if target.exists() && !args.replace.unwrap_or(false) {
         return Err(format!(
