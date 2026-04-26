@@ -152,6 +152,10 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "disable_rule_group",
         classification: Classification::LiveWrite,
     },
+    ToolMeta {
+        name: "get_rules_for_process",
+        classification: Classification::SafeRead,
+    },
 ];
 
 /// Look up a tool's metadata by name.

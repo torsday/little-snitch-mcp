@@ -702,6 +702,23 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    /// Return all rules whose `process` field matches the given path or code-id.
+    ///
+    /// Results are grouped by rule group (display name resolved via the S4
+    /// chain). Rules in disabled groups are flagged with `group_active: false`.
+    async fn get_rules_for_process(
+        &self,
+        Parameters(args): Parameters<tools::GetRulesForProcessArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::get_rules_for_process::run(args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
