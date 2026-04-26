@@ -775,10 +775,27 @@ impl ServerHandler for EchoServer {
             },
             annotations: None,
         };
+        let rule_groups_resource = Annotated {
+            raw: RawResource {
+                uri: resources::rule_groups::URI.to_string(),
+                name: "model-rule-groups".to_string(),
+                title: Some("Rule groups listing".to_string()),
+                description: Some(
+                    "All rule groups with display names, active state, and rule counts."
+                        .to_string(),
+                ),
+                mime_type: Some("application/json".to_string()),
+                size: None,
+                icons: None,
+                meta: None,
+            },
+            annotations: None,
+        };
         Ok(ListResourcesResult::with_all_items(vec![
             resource,
             schema_resource,
             model_resource,
+            rule_groups_resource,
         ]))
     }
 
@@ -801,7 +818,24 @@ impl ServerHandler for EchoServer {
             },
             annotations: None,
         };
-        Ok(ListResourceTemplatesResult::with_all_items(vec![tmpl]))
+        let rule_group_tmpl = Annotated {
+            raw: RawResourceTemplate {
+                uri_template: resources::rule_groups::URI_TEMPLATE.to_string(),
+                name: "model-rule-group".to_string(),
+                title: Some("Single rule group".to_string()),
+                description: Some(
+                    "Full detail for one rule group: display name, active state, and all rules."
+                        .to_string(),
+                ),
+                mime_type: Some("application/json".to_string()),
+                icons: None,
+            },
+            annotations: None,
+        };
+        Ok(ListResourceTemplatesResult::with_all_items(vec![
+            tmpl,
+            rule_group_tmpl,
+        ]))
     }
 
     async fn read_resource(
@@ -822,6 +856,49 @@ impl ServerHandler for EchoServer {
                 json,
                 resources::model::URI,
             )]));
+        }
+
+        // Rule groups listing resource.
+        if request.uri == resources::rule_groups::URI {
+            let json_str = self
+                .model_cache
+                .get_or_fetch(resources::model::fetch_model_json)
+                .map_err(|e| McpError::internal_error(e, None))?;
+            let model: little_snitch_mcp::model::Model = serde_json::from_str(&json_str)
+                .map_err(|e| McpError::internal_error(format!("model parse error: {e}"), None))?;
+            let summaries = resources::rule_groups::list_groups(&model);
+            let json = serde_json::to_string_pretty(&summaries)
+                .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+            return Ok(ReadResourceResult::new(vec![ResourceContents::text(
+                json,
+                resources::rule_groups::URI,
+            )]));
+        }
+
+        // Single rule group resource.
+        if let Some(id) = resources::rule_groups::match_item_uri(&request.uri) {
+            let json_str = self
+                .model_cache
+                .get_or_fetch(resources::model::fetch_model_json)
+                .map_err(|e| McpError::internal_error(e, None))?;
+            let model: little_snitch_mcp::model::Model = serde_json::from_str(&json_str)
+                .map_err(|e| McpError::internal_error(format!("model parse error: {e}"), None))?;
+            match resources::rule_groups::get_group(id, &model) {
+                Some(detail) => {
+                    let json = serde_json::to_string_pretty(&detail)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+                    return Ok(ReadResourceResult::new(vec![ResourceContents::text(
+                        json,
+                        request.uri,
+                    )]));
+                }
+                None => {
+                    return Err(McpError::invalid_params(
+                        format!("rule group {:?} not found", id),
+                        None,
+                    ));
+                }
+            }
         }
 
         // Schema resource — served directly from the embedded string; no ManagedDir needed.
