@@ -499,6 +499,28 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    // Classification: SudoRead. Runs `littlesnitch capture-traffic` and writes output to a
+    // time-stamped file in the managed captures/ directory.
+    #[tool(
+        description = "Capture network traffic for a specific process using Little Snitch. \
+                       Runs `littlesnitch capture-traffic` and writes the output (hex or pcap) \
+                       to the managed captures/ directory. \
+                       Returns the path, format, file size, elapsed time, and whether the \
+                       size cap was reached. Requires sudo access (SudoRead)."
+    )]
+    async fn capture_process_traffic(
+        &self,
+        Parameters(args): Parameters<tools::CaptureTrafficArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::capture_process_traffic::run(args).await {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]
