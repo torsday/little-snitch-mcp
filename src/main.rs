@@ -637,6 +637,69 @@ impl EchoServer {
             Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
         }
     }
+
+    /// Resolve a rule-group name and issue a confirmation token.
+    ///
+    /// Pass the returned token and `resolved_name` to `enable_rule_group`
+    /// after user approval.
+    async fn prepare_enable_rule_group(
+        &self,
+        Parameters(args): Parameters<tools::PrepareEnableRuleGroupArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_rule_groups::prepare_enable(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    /// Enable a rule group. Requires the token from `prepare_enable_rule_group`.
+    async fn enable_rule_group(
+        &self,
+        Parameters(args): Parameters<tools::EnableRuleGroupArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_rule_groups::enable(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    /// Resolve a rule-group name and issue a confirmation token for disabling.
+    ///
+    /// For builtin groups (macOS Services, iCloud Services, etc.) you must
+    /// pass `acknowledge_builtin: true`. Pass the returned token and
+    /// `resolved_name` to `disable_rule_group` after user approval.
+    async fn prepare_disable_rule_group(
+        &self,
+        Parameters(args): Parameters<tools::PrepareDisableRuleGroupArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_rule_groups::prepare_disable(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
+
+    /// Disable a rule group. Requires the token from `prepare_disable_rule_group`.
+    async fn disable_rule_group(
+        &self,
+        Parameters(args): Parameters<tools::DisableRuleGroupArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match tools::manage_rule_groups::disable(&self.session, args) {
+            Ok(result) => {
+                let json = serde_json::to_string_pretty(&result).unwrap_or_else(|e| e.to_string());
+                Ok(CallToolResult::success(vec![Content::text(json)]))
+            }
+            Err(msg) => Ok(CallToolResult::error(vec![Content::text(msg)])),
+        }
+    }
 }
 
 #[tool_handler]

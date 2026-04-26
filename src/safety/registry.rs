@@ -136,6 +136,22 @@ pub static TOOLS: &[ToolMeta] = &[
         name: "update_factory_rule_groups",
         classification: Classification::LiveWrite,
     },
+    ToolMeta {
+        name: "prepare_enable_rule_group",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "enable_rule_group",
+        classification: Classification::LiveWrite,
+    },
+    ToolMeta {
+        name: "prepare_disable_rule_group",
+        classification: Classification::SafeRead,
+    },
+    ToolMeta {
+        name: "disable_rule_group",
+        classification: Classification::LiveWrite,
+    },
 ];
 
 /// Look up a tool's metadata by name.

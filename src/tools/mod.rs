@@ -10,6 +10,7 @@ pub mod export_model_backup;
 pub mod list_preferences;
 pub mod lsrules_metadata;
 pub mod manage_profiles;
+pub mod manage_rule_groups;
 pub mod prepare_live_model_change;
 pub mod read_preference;
 pub mod remove_rule_from_live_model;
@@ -35,6 +36,10 @@ pub use lsrules_metadata::{DiffLsrulesArgs, SetMetadataArgs};
 pub use manage_profiles::{
     ActivateProfileArgs, DeactivateAllProfilesArgs, PrepareActivateProfileArgs,
     PrepareDeactivateAllProfilesArgs,
+};
+pub use manage_rule_groups::{
+    DisableRuleGroupArgs, EnableRuleGroupArgs, PrepareDisableRuleGroupArgs,
+    PrepareEnableRuleGroupArgs,
 };
 pub use prepare_live_model_change::PrepareLiveModelChangeArgs;
 pub use read_preference::ReadPreferenceArgs;
