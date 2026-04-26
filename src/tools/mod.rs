@@ -7,6 +7,7 @@ pub mod capture_process_traffic;
 pub mod create_lsrules_file;
 pub mod doctor;
 pub mod export_model_backup;
+pub mod get_rules_for_process;
 pub mod list_preferences;
 pub mod lsrules_metadata;
 pub mod manage_profiles;
@@ -31,6 +32,7 @@ pub use capture_process_traffic::CaptureTrafficArgs;
 pub use create_lsrules_file::CreateLsrulesArgs;
 pub use doctor::DoctorArgs;
 pub use export_model_backup::ExportModelBackupArgs;
+pub use get_rules_for_process::GetRulesForProcessArgs;
 pub use list_preferences::ListPreferencesArgs;
 pub use lsrules_metadata::{DiffLsrulesArgs, SetMetadataArgs};
 pub use manage_profiles::{
