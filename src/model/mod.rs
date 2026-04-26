@@ -27,8 +27,12 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 pub mod rule;
+pub mod rule_construct;
 
 pub use rule::{Action, Direction, Origin, Priority, RemoteOverlayEntry, Rule, StringOrVec};
+pub use rule_construct::{
+    ConstructError, NewRuleSpec, ProcessMatcher, Remote, construct, construct_at,
+};
 
 /// The full Little Snitch model as emitted by `littlesnitch export-model`.
 ///
