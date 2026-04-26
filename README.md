@@ -38,6 +38,57 @@ Requires Rust 1.85+ (edition 2024).
 
 ---
 
+## Trust & Security
+
+`little-snitch-mcp` is designed for security-conscious environments. Here is exactly what the binary does and does not do at runtime.
+
+### Network behavior
+
+**Zero outbound network calls.** The server communicates exclusively over local stdio with the MCP client process. It makes no HTTP requests, no DNS lookups, and opens no sockets of its own. All traffic is local to your machine.
+
+### What the binary can access
+
+| Resource | Access |
+|---|---|
+| Little Snitch live model | Read and write via the `littlesnitch` CLI (`/usr/local/bin/littlesnitch`) — same surface available to any Terminal command |
+| Managed rules directory | Read and write to `~/Library/Application Support/little-snitch-mcp/rules/` only |
+| Preferences | Read and write to LS global preferences via `littlesnitch prefs` (allowlisted keys only) |
+| Everything else | No access — no home directory scanning, no keychain, no network, no other processes |
+
+### Safety tiers
+
+Every tool is classified before registration. The classification governs what the tool is allowed to do at the call site, not just what it tries to do:
+
+| Tier | What it can do | Examples |
+|---|---|---|
+| **SafeRead** | Read-only. Zero side effects. No sudo required. | `tail_traffic`, `get_rules_for_process`, `find_rules_for_remote`, `doctor` |
+| **ManagedWrite** | Writes only to the managed rules directory. Never touches the live LS model. No sudo required. | `create_lsrules_file`, `add_rule_to_lsrules_file`, `update_rule_in_lsrules_file` |
+| **LiveWrite** | Modifies the live Little Snitch model. Requires sudo. Requires a confirmation token. | `add_rule_to_live_model`, `enable_rule_group`, `activate_profile` |
+
+There are two additional tiers (`SudoRead` for read operations that require sudo, and `LiveWriteStrong` for the highest-impact mutations such as full model restores) — see [`src/safety/classification.rs`](src/safety/classification.rs) for the full taxonomy.
+
+### Confirmation-token protocol
+
+No single LLM prompt can modify the live Little Snitch model unilaterally. Every LiveWrite operation requires a two-step handshake:
+
+1. **Prepare** (`prepare_*` tool): reads the current model, computes a diff hash, issues an HMAC-SHA256-signed token with a 5-minute TTL. Returns a human-readable summary of what will change.
+2. **Apply** (the corresponding write tool): verifies the token, re-checks the diff hash against the current model state, takes an automatic backup, then applies the change.
+
+If the model changed between prepare and apply — or the token expired — the apply step refuses. A human must see the prepare summary before any mutation reaches the live model.
+
+The implementation lives in [`src/safety/`](src/safety/). The session/token logic is in `token.rs`; the per-tool classification registry is in `registry.rs`.
+
+### Binary provenance
+
+Release binaries are built by GitHub Actions on a clean macOS runner, signed with a **Developer ID Application** certificate, and submitted to Apple's notarization service. The stapled notarization ticket means Gatekeeper validates the binary offline — no network call required at launch. You can verify the signature yourself:
+
+```bash
+codesign -dv --verbose=4 /usr/local/bin/little-snitch-mcp
+spctl --assess --verbose /usr/local/bin/little-snitch-mcp
+```
+
+---
+
 ## Quick start
 
 ### Prerequisites
