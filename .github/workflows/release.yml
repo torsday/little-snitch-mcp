@@ -67,13 +67,16 @@ jobs:
           rm /tmp/certificate.p12
 
       - name: Sign binary
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # The build.keychain set up above contains exactly one identity —
+          # the Developer ID Application cert imported from MACOS_CERTIFICATE.
+          # `codesign --sign "Developer ID Application"` matches by identity
+          # type, which is unambiguous given the single-identity keychain and
+          # is stable across cert renewals (no hardcoded CN or team ID).
           codesign \
             --options runtime \
             --timestamp \
-            --sign "Developer ID Application: $APPLE_TEAM_ID" \
+            --sign "Developer ID Application" \
             target/${{ matrix.target }}/release/little-snitch-mcp
 
       - name: Notarize binary
