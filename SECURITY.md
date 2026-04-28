@@ -64,6 +64,6 @@ These properties are pinned by code and CI; a regression that breaks any of them
 - MCP transport is stdio-only.
 - Live-model mutations require `sudo` **and** a fresh HMAC-SHA256 token bound to a model-state hash.
 - Every live mutation is preceded by an automatic backup written to the managed `backups/` directory.
-- Release binaries carry a Sigstore-signed GitHub Actions build-provenance attestation, an Apple Developer ID code signature, and a stapled notarization ticket.
+- Release binaries carry a Sigstore-signed GitHub Actions build-provenance attestation, an Apple Developer ID code signature, and Apple notarization (verified by Gatekeeper via online lookup; standalone Mach-O binaries can't embed a stapled ticket).
 
 See the [README "Security & trust" section](./README.md#security--trust) and [`docs/design.md` § Threat model](./docs/design.md#threat-model) for the full posture.

@@ -114,7 +114,7 @@ You don't have to take this README's word for any of the above.
    git grep -n 'std::net' -- 'src/**/*.rs'
    # Expected: only IpAddr/IpNet usage in find_rules_for_remote.rs.
    ```
-3. **Verify the binary's signature and notarization.** Release binaries are built by GitHub Actions on a clean macOS runner, signed with a **Developer ID Application** certificate, and submitted to Apple's notarization service. The stapled ticket means Gatekeeper validates offline — no network call at launch:
+3. **Verify the binary's signature and notarization.** Release binaries are built by GitHub Actions on a clean macOS runner, signed with a **Developer ID Application** certificate, and submitted to Apple's notarization service. The signature is verifiable offline; Gatekeeper validates the notarization status via an online lookup against Apple's database on first run (a `~50ms` request to `api.apple-cloudkit.com`, the standard pattern for standalone CLI binaries — stapling is only available for `.app` bundles, `.dmg`, and `.pkg`):
    ```bash
    codesign -dv --verbose=4 /usr/local/bin/little-snitch-mcp
    spctl --assess --verbose /usr/local/bin/little-snitch-mcp
@@ -238,7 +238,7 @@ The Little Snitch CLI does not expose **alert popup handling** (approve/deny liv
 
 ## Release and distribution
 
-Releases are built by the [GitHub Actions release workflow](.github/workflows/release.yml), which produces notarized, stapled binaries for both `aarch64-apple-darwin` (Apple Silicon) and `x86_64-apple-darwin` (Intel).
+Releases are built by the [GitHub Actions release workflow](.github/workflows/release.yml), which produces signed and notarized binaries for both `aarch64-apple-darwin` (Apple Silicon) and `x86_64-apple-darwin` (Intel). Gatekeeper validates the notarization via an online lookup on first run — no staple, since standalone Mach-O binaries can't embed a notarization ticket.
 
 ### Setting up Apple Developer secrets
 
@@ -261,7 +261,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-GitHub Actions builds both architectures, signs each binary, submits to Apple's notarization service, staples the ticket, and publishes the release assets.
+GitHub Actions builds both architectures, signs each binary, submits to Apple's notarization service, and publishes the release assets. (No staple step — see above.)
 
 ---
 

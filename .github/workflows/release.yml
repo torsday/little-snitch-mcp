@@ -98,10 +98,11 @@ jobs:
 
           rm /tmp/notarize-${{ matrix.target }}.zip
 
-      - name: Staple notarization ticket
-        run: |
-          xcrun stapler staple \
-            target/${{ matrix.target }}/release/little-snitch-mcp
+      # No staple step: stapler can't embed a notarization ticket in a
+      # standalone Mach-O executable (only .app / .dmg / .pkg). The
+      # notarization itself is recorded in Apple's database; Gatekeeper
+      # does an online lookup on first run. This is the same pattern used
+      # by gh, deno, bun, lazygit, and other Rust/Go CLI distributions.
 
       - name: Package
         run: |
