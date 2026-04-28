@@ -116,9 +116,12 @@ You don't have to take this README's word for any of the above.
    ```
 3. **Verify the binary's signature and notarization.** Release binaries are built by GitHub Actions on a clean macOS runner, signed with a **Developer ID Application** certificate, and submitted to Apple's notarization service. The signature is verifiable offline; Gatekeeper validates the notarization status via an online lookup against Apple's database on first run (a `~50ms` request to `api.apple-cloudkit.com`, the standard pattern for standalone CLI binaries — stapling is only available for `.app` bundles, `.dmg`, and `.pkg`):
    ```bash
+   # Show the signing identity + cert chain.
    codesign -dv --verbose=4 /usr/local/bin/little-snitch-mcp
-   spctl --assess --verbose /usr/local/bin/little-snitch-mcp
+   # Verify the signature is well-formed and the binary is unmodified.
+   codesign --verify --strict --verbose=4 /usr/local/bin/little-snitch-mcp
    ```
+   (Note: `spctl --assess` returns `does not seem to be an app` for standalone CLI binaries — that's `spctl` not knowing how to evaluate non-`.app` formats, not a signing problem. The `codesign` checks above are what verify integrity for a CLI.)
 4. **Verify build provenance.** Each release artifact is published with a Sigstore-signed attestation tying it to the GitHub Actions run that built it:
    ```bash
    gh attestation verify ./little-snitch-mcp-aarch64-apple-darwin.tar.gz \
