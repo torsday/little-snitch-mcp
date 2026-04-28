@@ -40,7 +40,7 @@ regex = "1"
 # remote `$ref`s, so we disable defaults to keep the no-network invariant.
 # See deny.toml and the README "Hard guarantees" section.
 jsonschema = { version = "0.46", default-features = false }
-similar = "2"
+similar = "3"
 ipnet = "2"
 
 [dev-dependencies]
